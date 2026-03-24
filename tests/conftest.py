@@ -16,14 +16,19 @@ def app():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "SECRET_KEY": "test-secret-key",
     })
 
     with app.app_context():
         db.drop_all()
         db.create_all()
 
-        user1 = User(username="testuser1", email="test1@example.com")
-        user2 = User(username="testuser2", email="test2@example.com")
+        user1 = User(username="testuser1", email="test1@example.com", password_hash="")
+        user1.set_password("password123")
+
+        user2 = User(username="testuser2", email="test2@example.com", password_hash="")
+        user2.set_password("password123")
+
         db.session.add_all([user1, user2])
         db.session.commit()
 

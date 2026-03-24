@@ -14,10 +14,16 @@ def create_app():
     from .routes.video.routes import video_bp
     from .routes.social.routes import social_bp
     from .routes.user.routes import user_bp
+    from .routes.auth.routes import auth_bp
 
     app.register_blueprint(video_bp)
     app.register_blueprint(social_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(auth_bp)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return db.session.get(User, int(user_id))
 
     with app.app_context():
         db.create_all()
