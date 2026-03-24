@@ -1,13 +1,15 @@
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
 from ...services.social.service import SocialService
 
 social_bp = Blueprint("social", __name__, url_prefix="/social")
 
 
 @social_bp.route("/comments", methods=["POST"])
+@login_required
 def add_comment():
     data = request.get_json() or {}
-    required_fields = ["content", "user_id", "video_id"]
+    required_fields = ["content", "video_id"]
     missing = [field for field in required_fields if field not in data]
 
     if missing:
@@ -15,7 +17,7 @@ def add_comment():
 
     comment, error = SocialService.add_comment(
         content=data["content"],
-        user_id=data["user_id"],
+        user_id=current_user.id,
         video_id=data["video_id"],
     )
 
@@ -36,16 +38,17 @@ def get_comments(video_id):
 
 
 @social_bp.route("/likes/toggle", methods=["POST"])
+@login_required
 def toggle_like():
     data = request.get_json() or {}
-    required_fields = ["user_id", "video_id"]
+    required_fields = ["video_id"]
     missing = [field for field in required_fields if field not in data]
 
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
     result, error = SocialService.toggle_like(
-        user_id=data["user_id"],
+        user_id=current_user.id,
         video_id=data["video_id"],
     )
 
@@ -56,16 +59,17 @@ def toggle_like():
 
 
 @social_bp.route("/subscribe", methods=["POST"])
+@login_required
 def subscribe():
     data = request.get_json() or {}
-    required_fields = ["subscriber_id", "creator_id"]
+    required_fields = ["creator_id"]
     missing = [field for field in required_fields if field not in data]
 
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
     subscription, error = SocialService.subscribe(
-        subscriber_id=data["subscriber_id"],
+        subscriber_id=current_user.id,
         creator_id=data["creator_id"],
     )
 

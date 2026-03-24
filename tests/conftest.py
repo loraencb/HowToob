@@ -41,3 +41,11 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+@pytest.fixture
+def auth_client(client):
+    client.post("/auth/login", json={
+        "email": "test1@example.com",
+        "password": "password123"
+    })
+    return client

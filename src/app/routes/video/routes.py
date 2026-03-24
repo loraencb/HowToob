@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
 from ...services.video.service import VideoService
 from ...services.social.service import SocialService
 
@@ -49,10 +50,11 @@ def get_video_stats(video_id):
 
 
 @video_bp.route("/", methods=["POST"])
+@login_required
 def create_video():
     data = request.get_json() or {}
 
-    required_fields = ["title", "file_path", "creator_id"]
+    required_fields = ["title", "file_path"]
     missing = [field for field in required_fields if field not in data]
 
     if missing:
@@ -63,7 +65,7 @@ def create_video():
         description=data.get("description"),
         file_path=data["file_path"],
         thumbnail_path=data.get("thumbnail_path"),
-        creator_id=data["creator_id"],
+        creator_id=current_user.id,
     )
 
     if error:
@@ -73,10 +75,14 @@ def create_video():
 
 
 @video_bp.route("/<int:video_id>", methods=["PUT"])
+@login_required
 def update_video(video_id):
     video = VideoService.get_video_by_id(video_id)
     if not video:
         return jsonify({"error": "Video not found"}), 404
+
+    if video.creator_id != current_user.id:
+        return jsonify({"error": "You can only update your own videos"}), 403
 
     data = request.get_json() or {}
     updated = VideoService.update_video(
@@ -90,10 +96,14 @@ def update_video(video_id):
 
 
 @video_bp.route("/<int:video_id>", methods=["DELETE"])
+@login_required
 def delete_video(video_id):
     video = VideoService.get_video_by_id(video_id)
     if not video:
         return jsonify({"error": "Video not found"}), 404
+
+    if video.creator_id != current_user.id:
+        return jsonify({"error": "You can only delete your own videos"}), 403
 
     VideoService.delete_video(video)
     return jsonify({"message": "Video deleted"}), 200

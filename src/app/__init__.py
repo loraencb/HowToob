@@ -1,4 +1,5 @@
-from flask import Flask
+from flask import Flask, jsonify
+from flask_login import current_user
 from .config import Config
 from .extensions import db, login_manager
 
@@ -10,6 +11,10 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
 
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        return jsonify({"error": "Authentication required"}), 401
+    
     from .models import User, Video, Comment, Like, Subscription
     from .routes.video.routes import video_bp
     from .routes.social.routes import social_bp
