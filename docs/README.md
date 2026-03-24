@@ -344,19 +344,23 @@ Expected output:
 9 passed
 
 ### API Endpoints
-**Videos**\n
+
+**Videos**
+```text
 Method |Endpoint | Description
 GET |	/videos/ | Get all videos
 GET |	/videos/<id> | Get single video (increments views)
 POST | /videos/ |	Create video
 PUT | /videos/<id> | Update video
 DELETE | /videos/<id> | Delete video
-**Social**\n
+```
+**Social**
+```text
 Method	Endpoint	Description
 POST	/social/comments	Add comment
 POST	/social/likes/toggle	Like/Unlike video
 POST	/social/subscribe	Subscribe to creator
-
+```
 ### Example Request
 Create Video
 curl -X POST http://127.0.0.1:5000/videos/ \
@@ -369,11 +373,11 @@ curl -X POST http://127.0.0.1:5000/videos/ \
 }'
 
 ### Technologies Used
-Python 3.12
-Flask
-Flask-SQLAlchemy
-SQLite
-Pytest
+- Python 3.12
+- Flask
+- Flask-SQLAlchemy
+- SQLite
+- Pytest
 
 ## Current Status
 
