@@ -36,13 +36,23 @@ def app():
         db.drop_all()
         db.create_all()
 
-        user = User(
+        user1 = User(
             username="test1",
             email="test1@example.com",
             role="viewer",
         )
-        user.set_password("password123")
-        db.session.add(user)
+        user1.set_password("password123")
+        db.session.add(user1)
+
+        # Seed fixed second user for tests that log in with hardcoded credentials
+        user2 = User(
+            username="test2",
+            email="test2@example.com",
+            role="viewer",
+        )
+        user2.set_password("password123")
+        db.session.add(user2)
+
         db.session.commit()
 
         yield app
@@ -101,22 +111,27 @@ def sample_video(app, sample_user):
 @pytest.fixture
 def create_second_user(app):
     with app.app_context():
-        user = User(
-            username=f"testuser2_{uuid.uuid4().hex[:8]}",
-            email=f"test2_{uuid.uuid4().hex[:8]}@example.com",
-            role="viewer",
-        )
-        user.set_password("password123")
-        db.session.add(user)
-        db.session.commit()
+        user = User.query.filter_by(email="test2@example.com").first()
         return user.id
-    
+
+
 @pytest.fixture
 def second_user_credentials(app):
     with app.app_context():
+        user = User.query.filter_by(email="test2@example.com").first()
+        return {
+            "id": user.id,
+            "email": "test2@example.com",
+            "password": "password123",
+        }
+
+
+@pytest.fixture
+def create_random_user(app):
+    with app.app_context():
         unique = uuid.uuid4().hex[:8]
-        email = f"test2_{unique}@example.com"
-        username = f"testuser2_{unique}"
+        email = f"test_random_{unique}@example.com"
+        username = f"testuser_random_{unique}"
 
         user = User(
             username=username,

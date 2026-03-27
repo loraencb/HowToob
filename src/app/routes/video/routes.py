@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_login import login_required, current_user
-import os
 
 from ...utils.file_handler import (
     save_file,
@@ -28,6 +27,7 @@ def get_feed():
 
     if page < 1:
         return jsonify({"error": "Page must be at least 1"}), 400
+
     if limit < 1 or limit > 100:
         return jsonify({"error": "Limit must be between 1 and 100"}), 400
 

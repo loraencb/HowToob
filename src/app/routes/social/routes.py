@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from ...services.social.service import SocialService
 
 social_bp = Blueprint("social", __name__, url_prefix="/social")
+users_bp = Blueprint("users_social", __name__, url_prefix="/users")
 
 
 @social_bp.route("/comments", methods=["POST"])
@@ -93,3 +94,21 @@ def subscribe():
             "creator_id": subscription.creator_id,
         }
     ), 201
+
+
+@users_bp.route("/<int:user_id>/subscriptions", methods=["GET"])
+def get_user_subscriptions(user_id):
+    subscriptions, error = SocialService.get_creator_subscriptions(user_id)
+    if error:
+        return jsonify({"error": error}), 404
+
+    return jsonify(
+        [
+            {
+                "id": sub.id,
+                "subscriber_id": sub.subscriber_id,
+                "creator_id": sub.creator_id,
+            }
+            for sub in subscriptions
+        ]
+    ), 200
