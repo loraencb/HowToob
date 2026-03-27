@@ -28,7 +28,11 @@ class SocialService:
         if not video:
             return None, "Video not found"
 
-        comments = Comment.query.filter_by(video_id=video_id).order_by(Comment.created_at.desc()).all()
+        comments = (
+            Comment.query.filter_by(video_id=video_id)
+            .order_by(Comment.created_at.desc())
+            .all()
+        )
         return comments, None
 
     @staticmethod
@@ -46,12 +50,41 @@ class SocialService:
         if existing_like:
             db.session.delete(existing_like)
             db.session.commit()
-            return {"liked": False}, None
+            return {
+                "liked": False,
+                "video_id": video_id,
+                "like_count": Like.query.filter_by(video_id=video_id).count(),
+            }, None
 
         like = Like(user_id=user_id, video_id=video_id)
         db.session.add(like)
         db.session.commit()
-        return {"liked": True}, None
+        return {
+            "liked": True,
+            "video_id": video_id,
+            "like_count": Like.query.filter_by(video_id=video_id).count(),
+        }, None
+
+    @staticmethod
+    def get_video_like_summary(video_id, user_id=None):
+        video = db.session.get(Video, video_id)
+        if not video:
+            return None, "Video not found"
+
+        like_count = Like.query.filter_by(video_id=video_id).count()
+        liked_by_current_user = False
+
+        if user_id is not None:
+            liked_by_current_user = (
+                Like.query.filter_by(video_id=video_id, user_id=user_id).first()
+                is not None
+            )
+
+        return {
+            "video_id": video_id,
+            "like_count": like_count,
+            "liked_by_current_user": liked_by_current_user,
+        }, None
 
     @staticmethod
     def subscribe(subscriber_id, creator_id):
@@ -105,12 +138,3 @@ class SocialService:
 
         subscriptions = Subscription.query.filter_by(subscriber_id=user_id).all()
         return subscriptions, None
-    
-    @staticmethod
-    def get_comments_by_video(video_id):
-        video = db.session.get(Video, video_id)
-        if not video:
-            return None, "Video not found"
-
-        comments = Comment.query.filter_by(video_id=video_id).order_by(Comment.created_at.desc()).all()
-        return comments, None

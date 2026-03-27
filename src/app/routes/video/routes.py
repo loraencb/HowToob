@@ -1,7 +1,13 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_login import login_required, current_user
 import os
-from ...utils.file_handler import save_file, allowed_file, ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
+
+from ...utils.file_handler import (
+    save_file,
+    allowed_file,
+    ALLOWED_VIDEO_EXTENSIONS,
+    ALLOWED_IMAGE_EXTENSIONS,
+)
 from ...services.video.service import VideoService
 from ...services.social.service import SocialService
 
@@ -13,30 +19,6 @@ def list_videos():
     videos = VideoService.get_all_videos()
     return jsonify([video.to_dict() for video in videos]), 200
 
-@video_bp.route("/", methods=["POST"])
-@login_required
-def create_video():
-    data = request.get_json()
-
-    title = data.get("title")
-    description = data.get("description")
-    file_path = data.get("file_path")
-
-    if not title or not file_path:
-        return jsonify({"error": "Title and file_path required"}), 400
-
-    video, error = VideoService.create_video(
-        title=title,
-        description=description,
-        file_path=file_path,
-        creator_id=current_user.id,
-    )
-
-    if error:
-        return jsonify({"error": error}), 404
-
-    return jsonify(video.to_dict()), 201
-
 
 @video_bp.route("/feed", methods=["GET"])
 def get_feed():
@@ -46,22 +28,11 @@ def get_feed():
 
     if page < 1:
         return jsonify({"error": "Page must be at least 1"}), 400
-
     if limit < 1 or limit > 100:
         return jsonify({"error": "Limit must be between 1 and 100"}), 400
 
     feed_data = VideoService.get_feed(page=page, limit=limit, search=search)
     return jsonify(feed_data), 200
-
-
-@video_bp.route("/creator/<int:user_id>", methods=["GET"])
-def get_creator_videos(user_id):
-    videos, error = VideoService.get_videos_by_creator(user_id)
-
-    if error:
-        return jsonify({"error": error}), 404
-
-    return jsonify([video.to_dict() for video in videos]), 200
 
 
 @video_bp.route("/<int:video_id>", methods=["GET"])
@@ -74,14 +45,48 @@ def get_video(video_id):
     return jsonify(video.to_dict()), 200
 
 
+@video_bp.route("/creator/<int:user_id>", methods=["GET"])
+def get_creator_videos(user_id):
+    videos, error = VideoService.get_videos_by_creator(user_id)
+    if error:
+        return jsonify({"error": error}), 404
+
+    return jsonify([video.to_dict() for video in videos]), 200
+
+
 @video_bp.route("/<int:video_id>/stats", methods=["GET"])
 def get_video_stats(video_id):
     stats, error = SocialService.get_video_stats(video_id)
-
     if error:
         return jsonify({"error": error}), 404
 
     return jsonify(stats), 200
+
+
+@video_bp.route("/", methods=["POST"])
+@login_required
+def create_video():
+    data = request.get_json() or {}
+
+    title = data.get("title")
+    description = data.get("description")
+    file_path = data.get("file_path")
+    thumbnail_path = data.get("thumbnail_path")
+
+    if not title or not file_path:
+        return jsonify({"error": "Title and file_path required"}), 400
+
+    video, error = VideoService.create_video(
+        title=title,
+        description=description,
+        file_path=file_path,
+        thumbnail_path=thumbnail_path,
+        creator_id=current_user.id,
+    )
+    if error:
+        return jsonify({"error": error}), 404
+
+    return jsonify(video.to_dict()), 201
 
 
 @video_bp.route("/upload", methods=["POST"])
@@ -92,32 +97,30 @@ def upload_video():
 
     video_file = request.files["video"]
     thumbnail_file = request.files.get("thumbnail")
-
     title = request.form.get("title")
     description = request.form.get("description")
 
     if not title:
         return jsonify({"error": "Title is required"}), 400
 
-    # Validate video
+    if not video_file.filename:
+        return jsonify({"error": "Video filename is required"}), 400
+
     if not allowed_file(video_file.filename, ALLOWED_VIDEO_EXTENSIONS):
         return jsonify({"error": "Invalid video format"}), 400
 
-    video_path, err = save_file(
-        video_file,
-        current_app.config["VIDEO_UPLOAD_FOLDER"]
-    )
+    video_path, err = save_file(video_file, current_app.config["VIDEO_UPLOAD_FOLDER"])
     if err:
         return jsonify({"error": err}), 400
 
     thumbnail_path = None
-    if thumbnail_file:
+    if thumbnail_file and thumbnail_file.filename:
         if not allowed_file(thumbnail_file.filename, ALLOWED_IMAGE_EXTENSIONS):
             return jsonify({"error": "Invalid thumbnail format"}), 400
 
         thumbnail_path, err = save_file(
             thumbnail_file,
-            current_app.config["THUMBNAIL_UPLOAD_FOLDER"]
+            current_app.config["THUMBNAIL_UPLOAD_FOLDER"],
         )
         if err:
             return jsonify({"error": err}), 400
@@ -129,7 +132,6 @@ def upload_video():
         thumbnail_path=thumbnail_path,
         creator_id=current_user.id,
     )
-
     if error:
         return jsonify({"error": error}), 404
 
@@ -153,7 +155,6 @@ def update_video(video_id):
         description=data.get("description"),
         thumbnail_path=data.get("thumbnail_path"),
     )
-
     return jsonify(updated.to_dict()), 200
 
 
@@ -170,17 +171,12 @@ def delete_video(video_id):
     VideoService.delete_video(video)
     return jsonify({"message": "Video deleted"}), 200
 
-@video_bp.route("/files/videos/<filename>")
+
+@video_bp.route("/files/videos/<path:filename>", methods=["GET"])
 def serve_video(filename):
-    return send_from_directory(
-        current_app.config["VIDEO_UPLOAD_FOLDER"],
-        filename
-    )
+    return send_from_directory(current_app.config["VIDEO_UPLOAD_FOLDER"], filename)
 
 
-@video_bp.route("/files/thumbnails/<filename>")
+@video_bp.route("/files/thumbnails/<path:filename>", methods=["GET"])
 def serve_thumbnail(filename):
-    return send_from_directory(
-        current_app.config["THUMBNAIL_UPLOAD_FOLDER"],
-        filename
-    )
+    return send_from_directory(current_app.config["THUMBNAIL_UPLOAD_FOLDER"], filename)

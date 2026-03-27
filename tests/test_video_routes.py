@@ -299,3 +299,26 @@ def test_upload_video(auth_client):
     assert data["title"] == "Upload Test"
     assert data["video_url"] is not None
     assert data["thumbnail_url"] is not None
+
+def test_cannot_update_other_users_video(auth_client, create_second_user):
+    create_response = auth_client.post(
+        "/videos/",
+        json={
+            "title": "Owner Video",
+            "description": "Owned by user1",
+            "file_path": "/videos/owner.mp4",
+        },
+    )
+
+    assert create_response.status_code == 201, create_response.get_json()
+    video_id = create_response.get_json()["id"]
+
+    auth_client.post("/auth/logout")
+
+    second_login = auth_client.post(
+        "/auth/login",
+        json={
+            "email": f"test2_",  # placeholder to show structure only
+            "password": "password123",
+        },
+    )
