@@ -69,6 +69,27 @@ file uploads --- with **100% passing test coverage**.
 ```
 ------------------------------------------------------------------------
 
+## API Endpoints (Highlights)
+
+### Auth
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `GET /auth/me`
+
+### Videos
+- `GET /videos/`
+- `POST /videos/`
+- `PUT /videos/<id>`
+- `DELETE /videos/<id>`
+- `GET /videos/feed`
+
+### Social
+- `POST /social/comments`
+- `POST /social/likes/toggle`
+- `POST /social/subscribe`
+- `GET /users/<id>/subscriptions`
+
 ## Setup & Installation
 
 ``` bash
