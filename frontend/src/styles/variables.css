@@ -97,7 +97,10 @@
   --z-modal: 500;
   --z-popover: 600;
   --z-tooltip: 700;
-
+  /* ═══ LAYOUT ═══ */
+  --navbar-height: 64px;
+  --sidebar-width: 280px;
+  --sidebar-width-collapsed: 80px;
   /* ═══ LAYOUT ═══ */
   --navbar-height: 64px;
   --sidebar-width: 240px;

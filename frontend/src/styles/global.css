@@ -90,8 +90,22 @@ img {
 ul, ol { list-style: none; }
 
 /* ═══ SCROLLBAR STYLING ═══ */
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; }
+html, body {
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+* {
+  scrollbar-width: none;
+}
 
 /* ═══ ACCESSIBILITY ═══ */
 .sr-only {
