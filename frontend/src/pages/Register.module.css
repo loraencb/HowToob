@@ -6,8 +6,8 @@
   background-color: var(--color-bg-dark);
   padding: var(--space-lg) var(--space-md);
   background-image:
-    radial-gradient(ellipse at 80% 60%, rgba(186, 25, 11, 0.07) 0%, transparent 50%),
-    radial-gradient(ellipse at 20% 30%, rgba(46, 196, 182, 0.05) 0%, transparent 40%);
+    radial-gradient(ellipse at 80% 60%, rgba(var(--color-primary-rgb), 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 30%, rgba(var(--color-accent-rgb), 0.08) 0%, transparent 40%);
 }
 
 .card {
@@ -111,7 +111,7 @@
 
 .roleOptionSelected {
   border-color: var(--color-primary);
-  background-color: rgba(186, 25, 11, 0.08);
+  background-color: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .radioInput {

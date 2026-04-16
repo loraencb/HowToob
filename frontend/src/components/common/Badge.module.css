@@ -14,17 +14,18 @@
 
 /* Variants */
 .default {
-  background-color: var(--color-bg-elevated);
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
   color: var(--color-text-muted);
 }
 
 .primary {
-  background-color: rgba(186, 25, 11, 0.2);
+  background-color: rgba(var(--color-primary-rgb), 0.16);
   color: var(--color-primary-light);
 }
 
 .success {
-  background-color: rgba(6, 214, 160, 0.15);
+  background-color: rgba(52, 211, 153, 0.15);
   color: var(--color-success);
 }
 
@@ -34,12 +35,12 @@
 }
 
 .error {
-  background-color: rgba(186, 25, 11, 0.15);
-  color: #FF8080;
+  background-color: rgba(251, 113, 133, 0.12);
+  color: var(--color-error);
 }
 
 .info {
-  background-color: rgba(46, 196, 182, 0.15);
+  background-color: rgba(var(--color-accent-rgb), 0.16);
   color: var(--color-info);
 }
 
@@ -50,7 +51,7 @@
 }
 
 .tier_mid {
-  background-color: rgba(46, 196, 182, 0.15);
+  background-color: rgba(var(--color-accent-rgb), 0.16);
   color: var(--color-tier-mid);
 }
 

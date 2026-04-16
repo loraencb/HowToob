@@ -12,6 +12,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
@@ -19,8 +20,15 @@ body {
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   color: var(--color-text-light);
-  background-color: var(--color-bg-dark);
+  background:
+    var(--gradient-page),
+    linear-gradient(180deg, rgba(8, 20, 35, 0.98), rgba(11, 24, 42, 1));
   overflow-x: hidden;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 /* ═══ SKIP LINK (accessibility) ═══ */
@@ -28,7 +36,7 @@ body {
   position: absolute;
   top: -40px;
   left: 0;
-  background: var(--color-primary);
+  background: var(--gradient-primary);
   color: #fff;
   padding: var(--space-sm) var(--space-md);
   z-index: var(--z-tooltip);
@@ -61,9 +69,9 @@ p:last-child { margin-bottom: 0; }
 a {
   color: var(--color-primary);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), opacity var(--transition-fast);
 }
-a:hover { color: var(--color-primary-hover); }
+a:hover { color: var(--color-primary-light); }
 
 /* ═══ BUTTONS ═══ */
 button {
@@ -71,6 +79,12 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 /* ═══ FORMS ═══ */
@@ -121,8 +135,13 @@ body::-webkit-scrollbar,
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(var(--color-primary-rgb), 0.28);
+  color: var(--color-text-light);
 }
 
 /* ═══ UTILITY CLASSES ═══ */

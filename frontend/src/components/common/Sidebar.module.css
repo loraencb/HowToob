@@ -4,8 +4,8 @@
   top: var(--navbar-height);
   height: calc(100vh - var(--navbar-height));
   width: var(--sidebar-width);
-  background: linear-gradient(180deg, #1A0E0F 0%, #13090A 60%, #0F0708 100%);
-  border-right: 1px solid rgba(186, 25, 11, 0.25);
+  background: linear-gradient(180deg, rgba(13, 27, 45, 0.98) 0%, rgba(8, 20, 35, 1) 58%, rgba(7, 17, 31, 1) 100%);
+  border-right: 1px solid var(--color-border);
   overflow-y: auto;
   overflow-x: hidden;
   z-index: var(--z-sticky);
@@ -65,13 +65,13 @@
 
 .navItem:hover {
   color: var(--color-text-light);
-  background-color: rgba(186, 25, 11, 0.08);
+  background-color: rgba(var(--color-primary-rgb), 0.08);
 }
 
 .navItemActive {
   color: var(--color-text-light);
   border-left-color: var(--color-primary);
-  background-color: rgba(186, 25, 11, 0.15);
+  background-color: rgba(var(--color-primary-rgb), 0.15);
 }
 
 .navItemActive .navIcon {

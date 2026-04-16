@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import styles from './Modal.module.css'
 
 /**
@@ -14,6 +14,7 @@ export default function Modal({
   hideCloseButton = false,
 }) {
   const dialogRef = useRef(null)
+  const titleId = useId()
 
   // Trap focus and handle Escape
   useEffect(() => {
@@ -33,10 +34,13 @@ export default function Modal({
         const focusable = dialog.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         )
+        if (focusable.length === 0) {
+          return
+        }
         const first = focusable[0]
         const last = focusable[focusable.length - 1]
         if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
-          e.preventDefault();
+          e.preventDefault()
           (e.shiftKey ? last : first)?.focus()
         }
       }
@@ -65,7 +69,7 @@ export default function Modal({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         className={`${styles.dialog} ${styles[size]}`}
         onClick={e => e.stopPropagation()}
@@ -73,7 +77,7 @@ export default function Modal({
         {/* Header */}
         {(title || !hideCloseButton) && (
           <div className={styles.header}>
-            {title && <h2 id="modal-title" className={styles.title}>{title}</h2>}
+            {title && <h2 id={titleId} className={styles.title}>{title}</h2>}
             {!hideCloseButton && (
               <button
                 type="button"

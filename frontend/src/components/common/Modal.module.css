@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: var(--color-bg-overlay);
   z-index: var(--z-modal-backdrop);
   display: flex;
   align-items: center;
@@ -11,8 +11,9 @@
 }
 
 .dialog {
-  background-color: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(22, 41, 68, 0.98), rgba(15, 30, 51, 0.99));
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   width: 100%;
@@ -62,8 +63,8 @@
 }
 
 .closeBtn:hover {
-  background-color: var(--color-bg-elevated);
-  color: var(--color-text-light);
+  background-color: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary-light);
 }
 
 .body {

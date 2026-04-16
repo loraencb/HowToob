@@ -7,22 +7,33 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)  // true while checking session on mount
+  const [authError, setAuthError] = useState('')
 
   // Check existing session on app load
   const checkAuth = useCallback(async () => {
+    setLoading(true)
     try {
       const data = await authAPI.me()
       if (data.authenticated) {
         setUser(data.user)
         setIsAuthenticated(true)
+        setAuthError('')
       } else {
         setUser(null)
         setIsAuthenticated(false)
+        setAuthError('')
       }
-    } catch {
-      // 401 = not logged in, not an error worth logging
+    } catch (error) {
       setUser(null)
       setIsAuthenticated(false)
+      if (error?.status === 401) {
+        setAuthError('')
+      } else {
+        setAuthError(
+          error?.message ||
+            'Could not verify your HowToob session from this device. Check the backend connection, cookie settings, and LAN origin.'
+        )
+      }
     } finally {
       setLoading(false)
     }
@@ -34,10 +45,21 @@ export function AuthProvider({ children }) {
 
   // Login
   async function login(email, password) {
-    const data = await authAPI.login(email, password)
-    setUser(data.user)
-    setIsAuthenticated(true)
-    return data.user
+    setAuthError('')
+    try {
+      const data = await authAPI.login(email, password)
+      setUser(data.user)
+      setIsAuthenticated(true)
+      return data.user
+    } catch (error) {
+      if (error?.status !== 401) {
+        setAuthError(
+          error?.message ||
+            'Login could not be completed from this device. Check the backend connection and session cookie settings.'
+        )
+      }
+      throw error
+    }
   }
 
   // Register
@@ -53,7 +75,12 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null)
       setIsAuthenticated(false)
+      setAuthError('')
     }
+  }
+
+  function clearAuthError() {
+    setAuthError('')
   }
 
   // Convenience helpers
@@ -64,12 +91,14 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated,
     loading,
+    authError,
     isCreator,
     isAdmin,
     login,
     register,
     logout,
     checkAuth,
+    clearAuthError,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,6 +1,8 @@
 .layout {
   min-height: 100vh;
-  background-color: var(--color-bg-dark);
+  background:
+    var(--gradient-page),
+    linear-gradient(180deg, rgba(8, 20, 35, 0.98), rgba(11, 24, 42, 1));
 }
 
 .main {

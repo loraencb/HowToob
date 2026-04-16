@@ -1,22 +1,66 @@
+import { API_BASE_URL } from './constants'
+
+const RESOLVED_API_BASE = API_BASE_URL.replace(/\/$/, '')
+
+function buildUrl(path) {
+  return `${RESOLVED_API_BASE}${path}`
+}
+
+function buildNetworkError(path, originalError) {
+  const usingDirectBackend = Boolean(RESOLVED_API_BASE)
+  const message = usingDirectBackend
+    ? `Could not reach the HowToob backend at ${RESOLVED_API_BASE}. Make sure the host machine is running the backend, the LAN IP is correct, and CORS allows this frontend origin.`
+    : 'Could not reach the HowToob backend through the Vite dev server. Make sure the backend is running on port 5000 on the host machine, or set VITE_API_BASE_URL to the LAN backend URL.'
+
+  const error = new Error(message)
+  error.name = 'APIConnectionError'
+  error.status = 0
+  error.code = 'NETWORK_ERROR'
+  error.details = {
+    path,
+    apiBase: RESOLVED_API_BASE || 'vite-proxy',
+    originalMessage: originalError?.message || null,
+  }
+  error.payload = null
+  return error
+}
+
+function normalizeNonJsonErrorBody(response, text) {
+  const normalizedText = String(text || '').trim()
+  const looksLikeHtml = /<!doctype html|<html[\s>]/i.test(normalizedText)
+
+  if (looksLikeHtml) {
+    return {
+      error:
+        response.status >= 500
+          ? 'The backend returned an HTML error page. Check the backend console or Flask logs for the real stack trace.'
+          : `The backend returned an unexpected HTML response (${response.status}).`,
+      details: {
+        contentType: response.headers.get('content-type') || '',
+        responseType: 'html',
+      },
+    }
+  }
+
+  return normalizedText ? { message: normalizedText } : {}
+}
+
 /**
  * API utility - thin wrappers around fetch() for the HowToob Flask backend.
  * All requests include credentials (session cookies for Flask-Login).
  */
 
-const API_BASE = ''  // Vite proxy handles /auth, /videos, /social, /users → localhost:5000
-
-// Core request helper
+const API_BASE = '' // Vite proxy handles /auth, /videos, /social, /users → localhost:5000
 
 async function request(method, path, body = null, isFormData = false) {
   const options = {
     method,
-    credentials: 'include',  // send session cookies
+    credentials: 'include',
     headers: {},
   }
 
-  if (body) {
+  if (body !== null && body !== undefined) {
     if (isFormData) {
-      // Let browser set multipart/form-data boundary automatically
       options.body = body
     } else {
       options.headers['Content-Type'] = 'application/json'
@@ -24,23 +68,61 @@ async function request(method, path, body = null, isFormData = false) {
     }
   }
 
-  const response = await fetch(`${API_BASE}${path}`, options)
+  let response
+  try {
+    response = await fetch(buildUrl(path), options)
+  } catch (error) {
+    throw buildNetworkError(path, error)
+  }
 
-  // Parse JSON regardless of status so error bodies are available
-  let data
+  if (response.status === 204) {
+    return { success: true }
+  }
+
   const contentType = response.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) {
-    data = await response.json()
-  } else {
-    data = { message: await response.text() }
+  let data
+
+  try {
+    if (contentType.includes('application/json')) {
+      data = await response.json()
+    } else {
+      const text = await response.text()
+      data = normalizeNonJsonErrorBody(response, text)
+    }
+  } catch {
+    data = {}
   }
 
   if (!response.ok) {
-    const message = data?.error || data?.message || `Request failed: ${response.status}`
-    throw new Error(message)
+    const message =
+      data?.error ||
+      data?.message ||
+      `Request failed: ${response.status}`
+
+    const error = new Error(message)
+    error.name = 'APIError'
+    error.status = response.status
+    error.code = data?.code || null
+    error.details = data?.details || null
+    error.payload = data
+
+    throw error
   }
 
   return data
+}
+
+function buildQuery(paramsObj = {}) {
+  const params = new URLSearchParams()
+
+  Object.entries(paramsObj).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      params.set(key, String(value))
+    }
+  })
+
+  const query = params.toString()
+  return query ? `?${query}` : ''
 }
 
 // Auth
@@ -62,14 +144,17 @@ export const authAPI = {
 // Videos
 
 export const videosAPI = {
-  getFeed: (page = 1, limit = 12, search = null) => {
-    const params = new URLSearchParams({ page, limit })
-    if (search) params.set('search', search)
-    return request('GET', `/videos/feed?${params}`)
-  },
+  getFeed: (page = 1, limit = 12, search = null) =>
+    request(
+      'GET',
+      `/videos/feed${buildQuery({ page, limit, search })}`
+    ),
 
   getById: (videoId) =>
     request('GET', `/videos/${videoId}`),
+
+  recordWatchEvent: (videoId, data) =>
+    request('POST', `/videos/${videoId}/watch-events`, data),
 
   getStats: (videoId) =>
     request('GET', `/videos/${videoId}/stats`),
@@ -94,13 +179,30 @@ export const socialAPI = {
     request('GET', `/social/comments/${videoId}`),
 
   addComment: (videoId, content, parentId = null) =>
-    request('POST', '/social/comments', { video_id: videoId, content, parent_id: parentId }),
+    request('POST', '/social/comments', {
+      video_id: videoId,
+      content,
+      parent_id: parentId,
+    }),
 
   toggleLike: (videoId) =>
     request('POST', '/social/likes/toggle', { video_id: videoId }),
 
-  subscribe: (creatorId) =>
-    request('POST', '/social/subscribe', { creator_id: creatorId }),
+  subscribe: (creatorId, tierLevel = 0) =>
+    request('POST', '/social/subscribe', {
+      creator_id: creatorId,
+      tier_level: tierLevel,
+    }),
+
+  submitReport: ({ targetType, targetId, reason, details = '', label = '', videoId = null }) =>
+    request('POST', '/social/reports', {
+      target_type: targetType,
+      target_id: targetId,
+      reason,
+      details,
+      label,
+      video_id: videoId,
+    }),
 }
 
 // Users
@@ -108,4 +210,73 @@ export const socialAPI = {
 export const usersAPI = {
   getSubscriptions: (userId) =>
     request('GET', `/users/${userId}/subscriptions`),
+
+  getProfile: (identifier) =>
+    request('GET', `/users/profile/${encodeURIComponent(identifier)}`),
+}
+
+// Progress
+
+export const progressAPI = {
+  getAll: (status = null, limit = null) =>
+    request('GET', `/users/me/progress${buildQuery({ status, limit })}`),
+
+  upsert: ({ videoId, watchedSeconds, durationSeconds, percentComplete, completed }) =>
+    request('POST', '/users/me/progress', {
+      video_id: videoId,
+      watched_seconds: watchedSeconds,
+      duration_seconds: durationSeconds,
+      percent_complete: percentComplete,
+      completed,
+    }),
+}
+
+// Playlists
+
+export const playlistsAPI = {
+  getAll: () =>
+    request('GET', '/users/me/playlists'),
+
+  create: ({ title, description, isDefault = false }) =>
+    request('POST', '/users/me/playlists', {
+      title,
+      description,
+      is_default: isDefault,
+    }),
+
+  getById: (playlistId) =>
+    request('GET', `/users/me/playlists/${playlistId}`),
+
+  update: (playlistId, { title, description }) =>
+    request('PUT', `/users/me/playlists/${playlistId}`, {
+      title,
+      description,
+    }),
+
+  delete: (playlistId) =>
+    request('DELETE', `/users/me/playlists/${playlistId}`),
+
+  addVideo: (playlistId, videoId, position = null) =>
+    request('POST', `/users/me/playlists/${playlistId}/videos`, {
+      video_id: videoId,
+      position,
+    }),
+
+  removeVideo: (playlistId, videoId) =>
+    request('DELETE', `/users/me/playlists/${playlistId}/videos/${videoId}`),
+
+  reorderVideos: (playlistId, videoIds) =>
+    request('PUT', `/users/me/playlists/${playlistId}/videos/reorder`, {
+      video_ids: videoIds,
+    }),
+}
+
+// Quizzes
+
+export const quizAPI = {
+  getByVideoId: (videoId) =>
+    request('GET', `/videos/${videoId}/quiz`),
+
+  submit: (videoId, answers) =>
+    request('POST', `/videos/${videoId}/quiz/submissions`, { answers }),
 }

@@ -1,4 +1,8 @@
 # OOP-Team-B_Youtube-lite
+
+> Note: The current repo layout uses `src/app` for the Flask backend and `frontend/` for the React client. The structure examples below describe an earlier backend-only phase of the project.
+> See the root `README.md` for the current top-level layout.
+
 A lightweight YouTube-style application built as an OOP team project.
 
 ## System Architecture

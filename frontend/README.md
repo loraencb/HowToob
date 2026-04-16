@@ -20,7 +20,7 @@ Built for OOP Team B as part of the course project.
 ## Requirements
 
 - Node.js 18 or higher
-- The Flask backend running on `http://localhost:5000`
+- The Flask backend running on the host machine at `http://localhost:5000` or `http://<LAN_IP>:5000`
 
 ---
 
@@ -44,22 +44,39 @@ npm install
 npm run dev
 ```
 
-The site will be available at `http://localhost:5173`
+The dev server now binds to the local network, so the site will be available at:
+
+- `http://localhost:5173`
+- `http://<LAN_IP>:5173`
+
+To point the frontend directly at a LAN backend, create `frontend/.env.local`:
+
+```env
+VITE_API_BASE_URL=http://<LAN_IP>:5000
+```
 
 The Flask backend must be running separately on port 5000 for API calls to work.
 To start the backend, open a separate terminal from the project root and run:
 
-```bash
-python app.py
+```powershell
+$env:HOST="0.0.0.0"
+$env:PORT="5000"
+$env:DEBUG="true"
+venv\Scripts\python.exe run.py
 ```
 
 ---
 
 ## How the Frontend Talks to the Backend
 
-Vite is configured to proxy API requests to Flask during development.
+The frontend supports two development modes:
+
+- direct backend calls through `VITE_API_BASE_URL=http://<LAN_IP>:5000`
+- Vite proxy fallback when `VITE_API_BASE_URL` is unset
+
+When the env var is unset, Vite proxies API requests to Flask during development.
 When React makes a request to `/auth/login`, Vite forwards it to `http://localhost:5000/auth/login`.
-This means there are no CORS issues and session cookies work correctly.
+When the env var is set, the browser calls the backend directly and Flask CORS must allow the frontend origin.
 
 Proxied routes:
 
@@ -67,6 +84,7 @@ Proxied routes:
 - `/videos` - video feed, upload, edit, delete
 - `/social` - comments, likes, subscriptions
 - `/users` - user profile data
+- `/admin` - moderation/admin actions
 
 All API calls live in one place: `src/utils/api.js`
 

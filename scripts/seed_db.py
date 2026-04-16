@@ -6,9 +6,9 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.app import create_app, db
-from src.app.models.user import User
-from src.app.models.video import Video
+from backend.src.app import create_app, db
+from backend.src.app.models.user import User
+from backend.src.app.models.video import Video
 from datetime import datetime, timedelta
 
 def seed_database():

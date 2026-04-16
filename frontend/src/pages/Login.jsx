@@ -8,7 +8,7 @@ import ErrorMessage from '../components/common/ErrorMessage'
 import styles from './Login.module.css'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, authError, clearAuthError } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -26,6 +26,7 @@ export default function Login() {
       // Clear field error on change
       if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }))
       if (serverError) setServerError('')
+      if (authError) clearAuthError()
     }
   }
 
@@ -48,11 +49,20 @@ export default function Login() {
 
     setLoading(true)
     setServerError('')
+    clearAuthError()
     try {
       await login(form.email, form.password)
       navigate(from, { replace: true })
     } catch (err) {
-      setServerError(err.message || 'Login failed. Please check your credentials.')
+      if (err?.code === 'NETWORK_ERROR') {
+        setServerError(
+          'Could not reach the HowToob backend from this device. Check that the host PC is on, both devices are on the same Wi-Fi, and the frontend is using the correct LAN IP.'
+        )
+      } else if (err?.status === 401) {
+        setServerError('Login failed. Please check your email and password.')
+      } else {
+        setServerError(err.message || 'Login failed. Please check your credentials.')
+      }
     } finally {
       setLoading(false)
     }
@@ -73,6 +83,10 @@ export default function Login() {
         {serverError && (
           <ErrorMessage message={serverError} className={styles.serverError} />
         )}
+
+        {!serverError && authError ? (
+          <ErrorMessage message={authError} className={styles.serverError} />
+        ) : null}
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <Input

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { PlaylistProvider } from './context/PlaylistContext'
 import { ProgressProvider } from './context/ProgressContext'
 import MainLayout from './components/layout/MainLayout'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -37,75 +38,70 @@ function NotFound() {
       <p style={{ color: 'var(--color-text-muted)' }}>
         The page you&apos;re looking for doesn&apos;t exist.
       </p>
-      <a href="/" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+      <Link to="/" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
         Back to home
-      </a>
+      </Link>
     </div>
   )
-}
-
-// AuthRedirect: send already-logged-in users away from auth pages
-function AuthRedirect({ children }) {
-  // We can't use useAuth here because it's inside BrowserRouter but outside
-  // AuthProvider. Handled via state check in the provider itself.
-  return children
 }
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ProgressProvider>
-          <Suspense fallback={<LoadingSpinner size="fullPage" />}>
-            <Routes>
-              {/* Auth pages (no layout shell) */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+        <PlaylistProvider>
+          <ProgressProvider>
+            <Suspense fallback={<LoadingSpinner size="fullPage" />}>
+              <Routes>
+                {/* Auth pages (no layout shell) */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-              {/* Main app (with Navbar + Sidebar layout) */}
-              <Route element={<MainLayout />}>
-                {/* Public routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/trending" element={<Home />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/watch/:videoId" element={<Watch />} />
-                <Route path="/profile/:username" element={<Profile />} />
-                <Route path="/playlist/:playlistId" element={<Playlist />} />
+                {/* Main app (with Navbar + Sidebar layout) */}
+                <Route element={<MainLayout />}>
+                  {/* Public routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/trending" element={<Home />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/watch/:videoId" element={<Watch />} />
+                  <Route path="/profile/:username" element={<Profile />} />
+                  <Route path="/playlist/:playlistId" element={<Playlist />} />
 
-                {/* Protected: any authenticated user */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute><Dashboard /></ProtectedRoute>
-                } />
-                <Route path="/my-playlists" element={
-                  <ProtectedRoute><MyPlaylists /></ProtectedRoute>
-                } />
-                <Route path="/history" element={
-                  <ProtectedRoute><WatchHistory /></ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute><Settings /></ProtectedRoute>
-                } />
-                <Route path="/subscription" element={
-                  <ProtectedRoute><Subscription /></ProtectedRoute>
-                } />
-                <Route path="/quiz/:videoId" element={
-                  <ProtectedRoute><Quiz /></ProtectedRoute>
-                } />
+                  {/* Protected: any authenticated user */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute><Dashboard /></ProtectedRoute>
+                  } />
+                  <Route path="/my-playlists" element={
+                    <ProtectedRoute><MyPlaylists /></ProtectedRoute>
+                  } />
+                  <Route path="/history" element={
+                    <ProtectedRoute><WatchHistory /></ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute><Settings /></ProtectedRoute>
+                  } />
+                  <Route path="/subscription" element={
+                    <ProtectedRoute><Subscription /></ProtectedRoute>
+                  } />
+                  <Route path="/quiz/:videoId" element={
+                    <ProtectedRoute><Quiz /></ProtectedRoute>
+                  } />
 
-                {/* Protected: creator only */}
-                <Route path="/upload" element={
-                  <ProtectedRoute role="creator"><Upload /></ProtectedRoute>
-                } />
-                <Route path="/creator-dashboard" element={
-                  <ProtectedRoute role="creator"><CreatorDash /></ProtectedRoute>
-                } />
+                  {/* Protected: creator only */}
+                  <Route path="/upload" element={
+                    <ProtectedRoute role="creator"><Upload /></ProtectedRoute>
+                  } />
+                  <Route path="/creator-dashboard" element={
+                    <ProtectedRoute role="creator"><CreatorDash /></ProtectedRoute>
+                  } />
 
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </ProgressProvider>
+                  {/* Catch-all */}
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </ProgressProvider>
+        </PlaylistProvider>
       </AuthProvider>
     </BrowserRouter>
   )

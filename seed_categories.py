@@ -1,9 +1,9 @@
 import os, shutil, uuid
 from werkzeug.security import generate_password_hash
-from src.app import create_app
-from src.app.extensions import db
-from src.app.models.user import User
-from src.app.models.video import Video
+from backend.src.app import create_app
+from backend.src.app.extensions import db
+from backend.src.app.models.user import User
+from backend.src.app.models.video import Video
 
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 SRC_VIDEO = os.path.join(BASE_DIR, "test.mp4")

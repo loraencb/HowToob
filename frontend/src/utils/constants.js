@@ -1,5 +1,5 @@
 // API
-export const API_BASE_URL = '/api'
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim()
 
 // Subscription tiers
 export const TIERS = {
@@ -141,4 +141,9 @@ export const QUIZ_PASS_SCORE = 70 // Minimum passing score.
 export const STORAGE_KEYS = {
   SIDEBAR_COLLAPSED: 'howtoob_sidebar_collapsed',
   THEME: 'howtoob_theme',
+  LEARNING_PROGRESS: 'howtoob_learning_progress',
+  LEARNING_STATS: 'howtoob_learning_stats',
+  LOCAL_PLAYLISTS: 'howtoob_local_playlists',
+  LOCAL_PREFERENCES: 'howtoob_local_preferences',
+  LOCAL_REPORTS: 'howtoob_local_reports',
 }

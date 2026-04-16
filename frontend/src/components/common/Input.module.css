@@ -11,16 +11,16 @@
 }
 
 .required {
-  color: var(--color-primary);
+  color: var(--color-primary-light);
 }
 
 .input {
   width: 100%;
   padding: var(--space-sm) var(--space-md);
-  background-color: var(--color-bg-elevated);
+  background-color: rgba(15, 30, 51, 0.92);
   color: var(--color-text-light);
   border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -48,7 +48,7 @@
 
 .inputError:focus {
   border-color: var(--color-error);
-  box-shadow: 0 0 0 3px rgba(186, 25, 11, 0.25);
+  box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.2);
 }
 
 .errorText {

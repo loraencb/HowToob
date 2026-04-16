@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatViewCount, formatNumericDate, truncate } from '../../utils/formatters'
+import {
+  getAccessMetadata,
+  getCreatorName,
+  getCreatorProfileSlug,
+  getTierLevel,
+} from '../../utils/lessonMetadata'
 import styles from './VideoCard.module.css'
 
 /**
@@ -9,12 +15,12 @@ import styles from './VideoCard.module.css'
  */
 export default function VideoCard({ video, textOnly = false }) {
   const [isHovering, setIsHovering] = useState(false)
-  const [previewTimer, setPreviewTimer] = useState(null)
   const thumbnailUrl = video.thumbnail_url || null
-  
-  // Determine tier information from subscription data
-  const tierLevel = video.subscription?.tier_level || 0
+  const tierLevel = getTierLevel(video)
   const isTiered = tierLevel > 0
+  const creatorLabel = getCreatorName(video)
+  const creatorSlug = getCreatorProfileSlug(video)
+  const accessMetadata = getAccessMetadata(video)
   
   const tierConfig = {
     1: { label: 'Tier 1', color: '#2EC4B6' }, // teal/cyan
@@ -25,21 +31,10 @@ export default function VideoCard({ video, textOnly = false }) {
 
   function handleMouseEnter() {
     setIsHovering(true)
-    // Start video preview after 1 second delay
-    const timer = setTimeout(() => {
-      // Video preview would play here with audio enabled
-      // Placeholder for audio preview functionality
-      console.log('Playing preview for:', video.title)
-    }, 1000)
-    setPreviewTimer(timer)
   }
 
   function handleMouseLeave() {
     setIsHovering(false)
-    if (previewTimer) {
-      clearTimeout(previewTimer)
-      setPreviewTimer(null)
-    }
   }
 
   return (
@@ -50,6 +45,9 @@ export default function VideoCard({ video, textOnly = false }) {
           className={styles.thumbnailLink}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onFocus={handleMouseEnter}
+          onBlur={handleMouseLeave}
+          aria-label={`Open lesson: ${video.title}`}
         >
           <div className={styles.thumbnail}>
             {thumbnailUrl ? (
@@ -109,17 +107,27 @@ export default function VideoCard({ video, textOnly = false }) {
           </Link>
         )}
 
-        {!textOnly && (
-          <Link to={`/profile/${video.creator?.username || video.creator_id}`} className={styles.cardCreator}>
-            {video.creator?.username || `Creator #${video.creator_id}`}
+        {!textOnly && creatorSlug ? (
+          <Link
+            to={`/profile/${encodeURIComponent(creatorSlug)}`}
+            className={styles.cardCreator}
+            aria-label={`Open creator profile: ${creatorLabel}`}
+          >
+            {creatorLabel}
           </Link>
-        )}
+        ) : !textOnly ? (
+          <span className={styles.cardCreator}>{creatorLabel}</span>
+        ) : null}
 
         <div className={styles.cardMeta}>
           <span>{formatViewCount(video.views)} views</span>
           <span className={styles.metaDot} aria-hidden="true">·</span>
           <span>{formatNumericDate(video.created_at)}</span>
         </div>
+
+        {!textOnly ? (
+          <p className={styles.tierMeta}>{accessMetadata.note}</p>
+        ) : null}
       </div>
     </article>
   )

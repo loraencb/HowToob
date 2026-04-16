@@ -1,158 +1,753 @@
-// This page uses mock quiz data for now.
-
-import { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { useProgress } from '../context/ProgressContext'
-import Button from '../components/common/Button'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Badge from '../components/common/Badge'
+import Button from '../components/common/Button'
+import ErrorMessage from '../components/common/ErrorMessage'
+import LoadingSpinner from '../components/common/LoadingSpinner'
+import { usePlaylists } from '../context/PlaylistContext'
+import { useProgress } from '../context/ProgressContext'
+import { quizAPI, videosAPI } from '../utils/api'
 import { QUIZ_PASS_SCORE } from '../utils/constants'
+import { getAccessMetadata, getCategoryLabel, getCreatorName } from '../utils/lessonMetadata'
+import { buildPrototypeQuiz } from '../utils/quizMvp'
+import { formatNumericDate, formatViewCount, truncate } from '../utils/formatters'
 import styles from './Quiz.module.css'
 
-// Replace this with real quiz data later.
-const MOCK_QUIZ = [
-  {
-    id: 1,
-    question: 'What is the primary goal of this tutorial?',
-    options: ['Entertainment only', 'Structured learning with progress tracking', 'Social networking', 'Content creation tools'],
-    correctIndex: 1,
-  },
-  {
-    id: 2,
-    question: 'Which feature makes HowToob different from standard video platforms?',
-    options: ['Longer videos', 'Progress tracking and AI quizzes', 'Live streaming', 'Social feeds'],
-    correctIndex: 1,
-  },
-  {
-    id: 3,
-    question: 'What percentage of a video must be watched to count as "completed"?',
-    options: ['50%', '75%', '90%', '100%'],
-    correctIndex: 2,
-  },
-]
+function normalizeVideoResponse(data) {
+  const raw = data?.video ?? data?.data ?? data ?? null
+  if (!raw) return null
+
+  return {
+    ...raw,
+    id: Number(raw.id),
+    title: raw.title || 'Untitled lesson',
+    description: raw.description || '',
+    thumbnail_url: raw.thumbnail_url || raw.thumbnail || '',
+    created_at: raw.created_at || null,
+    views: raw.views || 0,
+    category: raw.category || raw.subject || raw.topic || '',
+    creator_id: raw.creator_id ?? raw.creator?.id ?? null,
+    author_name:
+      raw.author_name ||
+      raw.creator_name ||
+      raw.creator?.username ||
+      (raw.creator_id ? `Creator #${raw.creator_id}` : 'HowToob creator'),
+    subscription: raw.subscription || null,
+  }
+}
+
+function buildLocalResult(questions, selectedAnswers, passScore) {
+  const questionResults = questions.map((question) => {
+    const selectedIndex = selectedAnswers[question.id]
+    const correctIndex = question.correctIndex
+
+    return {
+      question_id: question.id,
+      question: question.question,
+      selected_index: selectedIndex,
+      correct_index: correctIndex,
+      correct: selectedIndex === correctIndex,
+      explanation: question.explanation,
+    }
+  })
+
+  const correctCount = questionResults.filter((result) => result.correct).length
+  const questionCount = questionResults.length
+  const score = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
+  const passed = score >= passScore
+
+  return {
+    submitted_at: new Date().toISOString(),
+    summary: {
+      score,
+      passed,
+      question_count: questionCount,
+      correct_count: correctCount,
+      incorrect_count: Math.max(0, questionCount - correctCount),
+      pass_score: passScore,
+    },
+    question_results: questionResults,
+  }
+}
 
 export default function Quiz() {
+  const navigate = useNavigate()
   const { videoId } = useParams()
-  const { saveQuizScore } = useProgress()
+  const [searchParams] = useSearchParams()
+  const { playlists, loading: playlistsLoading, getPlaylistDetail } = usePlaylists()
+  const { saveQuizScore, getQuizScore, getVideoProgress } = useProgress()
 
+  const [video, setVideo] = useState(null)
+  const [quiz, setQuiz] = useState(null)
+  const [latestAttempt, setLatestAttempt] = useState(null)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [fallbackNotice, setFallbackNotice] = useState('')
+  const [accessDenied, setAccessDenied] = useState(null)
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState({})
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
-  const questions = MOCK_QUIZ
-  const current = questions[currentIdx]
-  const isLast = currentIdx === questions.length - 1
+  const activePlaylistId = searchParams.get('playlist')
+  const activePlaylist = useMemo(
+    () => playlists.find((playlist) => playlist.id === activePlaylistId) || null,
+    [activePlaylistId, playlists]
+  )
+  const playlistContextUnavailable = Boolean(
+    activePlaylistId && !activePlaylist && !playlistsLoading
+  )
+  const currentPlaylistIndex =
+    activePlaylist?.items.findIndex((item) => Number(item.videoId) === Number(videoId)) ?? -1
+  const nextPlaylistItem =
+    activePlaylist && currentPlaylistIndex > -1
+      ? activePlaylist.items[currentPlaylistIndex + 1] || null
+      : null
+
+  const lessonProgress = getVideoProgress(videoId)
+  const storedAttempt = getQuizScore(videoId)
+  const previousAttempt = latestAttempt || storedAttempt
+
+  useEffect(() => {
+    if (!activePlaylistId) return
+
+    getPlaylistDetail(activePlaylistId).catch(() => {
+      // Missing playlist context is handled in the UI.
+    })
+  }, [activePlaylistId, getPlaylistDetail])
+
+  useEffect(() => {
+    let active = true
+
+    async function loadLesson() {
+      setLoading(true)
+      setError('')
+      setFallbackNotice('')
+      setAccessDenied(null)
+      setSubmitted(false)
+      setSubmitting(false)
+      setSubmitError('')
+      setCurrentIdx(0)
+      setSelectedAnswers({})
+      setResult(null)
+
+      try {
+        const data = await quizAPI.getByVideoId(videoId)
+        if (!active) return
+
+        const normalized = normalizeVideoResponse(data?.video)
+        if (!normalized) {
+          throw new Error('Could not load this lesson for quiz context.')
+        }
+
+        setVideo(normalized)
+        setQuiz(data?.quiz || null)
+        setLatestAttempt(data?.latest_attempt || null)
+
+        if (data?.latest_attempt) {
+          saveQuizScore(videoId, data.latest_attempt.score, {
+            submittedAt: data.latest_attempt.submitted_at,
+            source: 'backend',
+            passed: data.latest_attempt.passed,
+          })
+        }
+      } catch (requestError) {
+        if (!active) return
+
+        if (requestError?.code === 'ACCESS_DENIED') {
+          setVideo(null)
+          setQuiz(null)
+          setLatestAttempt(null)
+          setAccessDenied(requestError)
+          setError('')
+          setLoading(false)
+          return
+        }
+
+        try {
+          const fallbackData = await videosAPI.getById(videoId)
+          if (!active) return
+
+          const normalized = normalizeVideoResponse(fallbackData)
+          if (!normalized) {
+            throw new Error('Could not load this lesson for quiz fallback.')
+          }
+
+          const fallbackQuestions = buildPrototypeQuiz(normalized, {
+            activePlaylist,
+            lessonProgress,
+          })
+
+          setVideo(normalized)
+          setQuiz({
+            mode: 'prototype',
+            source: 'local_fallback',
+            title: `${normalized.title} knowledge check`,
+            description:
+              'Backend quiz delivery is unavailable for this lesson, so HowToob is using a local prototype fallback on this device.',
+            question_count: fallbackQuestions.length,
+            pass_score: QUIZ_PASS_SCORE,
+            questions: fallbackQuestions,
+          })
+          setLatestAttempt(null)
+          setFallbackNotice(
+            'The quiz service could not be loaded from the backend, so this lesson is using a local prototype fallback.'
+          )
+        } catch (fallbackError) {
+          if (!active) return
+
+          if (fallbackError?.code === 'ACCESS_DENIED') {
+            setAccessDenied(fallbackError)
+            setError('')
+          } else {
+            setError(
+              fallbackError.message ||
+                requestError.message ||
+                'Quiz context could not be loaded.'
+            )
+          }
+
+          setVideo(null)
+          setQuiz(null)
+          setLatestAttempt(null)
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadLesson()
+
+    return () => {
+      active = false
+    }
+  }, [
+    activePlaylist?.id,
+    activePlaylist?.updatedAt,
+    lessonProgress.completed,
+    lessonProgress.percent,
+    saveQuizScore,
+    videoId,
+  ])
+
+  const questions = useMemo(
+    () =>
+      (Array.isArray(quiz?.questions) ? quiz.questions : []).map((question, index) => ({
+        ...question,
+        id: question.id || `q-${index + 1}`,
+      })),
+    [quiz]
+  )
+
+  const lessonHref = activePlaylist
+    ? `/watch/${videoId}?playlist=${activePlaylist.id}`
+    : `/watch/${videoId}`
+  const continueHref = nextPlaylistItem
+    ? `/watch/${nextPlaylistItem.videoId}?playlist=${activePlaylist.id}`
+    : activePlaylist
+      ? `/playlist/${activePlaylist.id}`
+      : lessonHref
+
+  const passScore = Number(quiz?.pass_score || QUIZ_PASS_SCORE)
+  const accessMetadata = getAccessMetadata(video)
+  const localResult = useMemo(
+    () =>
+      submitted && quiz?.source === 'local_fallback'
+        ? buildLocalResult(questions, selectedAnswers, passScore)
+        : null,
+    [passScore, questions, quiz?.source, selectedAnswers, submitted]
+  )
+  const activeResult = result || localResult
+  const score = Math.round(activeResult?.summary?.score || 0)
+  const passed = Boolean(activeResult?.summary?.passed)
+  const reviewItems = useMemo(
+    () =>
+      (activeResult?.question_results || []).map((item, index) => {
+        const matchingQuestion =
+          questions.find((question) => question.id === item.question_id) || questions[index]
+        const options = matchingQuestion?.options || []
+
+        return {
+          ...item,
+          index,
+          selectedLabel:
+            item.selected_index != null
+              ? options[item.selected_index] || 'No answer selected'
+              : 'No answer selected',
+          correctLabel:
+            item.correct_index != null
+              ? options[item.correct_index] || 'Correct answer unavailable'
+              : 'Correct answer unavailable',
+        }
+      }),
+    [activeResult?.question_results, questions]
+  )
+  const currentQuestion = questions[currentIdx] || null
 
   function handleSelect(optionIdx) {
-    if (submitted) return
-    setSelectedAnswers(prev => ({ ...prev, [current.id]: optionIdx }))
+    if (submitted || !currentQuestion) return
+
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: optionIdx,
+    }))
   }
 
   function handleNext() {
-    if (!isLast) setCurrentIdx(i => i + 1)
+    if (currentIdx < questions.length - 1) {
+      setCurrentIdx((prev) => prev + 1)
+    }
   }
 
-  function handleSubmit() {
-    setSubmitted(true)
-    const correct = questions.filter(q => selectedAnswers[q.id] === q.correctIndex).length
-    const score = Math.round((correct / questions.length) * 100)
-    saveQuizScore(videoId, score)
+  function handleReset() {
+    setSubmitted(false)
+    setSubmitting(false)
+    setSubmitError('')
+    setCurrentIdx(0)
+    setSelectedAnswers({})
+    setResult(null)
+  }
+
+  async function handleSubmit() {
+    if (!currentQuestion) return
+
+    setSubmitError('')
+
+    if (quiz?.source === 'local_fallback') {
+      const fallbackResult = buildLocalResult(questions, selectedAnswers, passScore)
+      setResult(fallbackResult)
+      setSubmitted(true)
+      saveQuizScore(videoId, fallbackResult.summary.score, {
+        submittedAt: fallbackResult.submitted_at,
+        source: 'local',
+        passed: fallbackResult.summary.passed,
+      })
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      const payload = await quizAPI.submit(videoId, selectedAnswers)
+      const submittedResult = payload?.result || null
+
+      if (!submittedResult) {
+        throw new Error('Quiz submission did not return a result summary.')
+      }
+
+      setResult(submittedResult)
+      setLatestAttempt(submittedResult)
+      setSubmitted(true)
+      saveQuizScore(videoId, submittedResult.summary?.score || 0, {
+        submittedAt: submittedResult.submitted_at,
+        source: 'backend',
+        passed: submittedResult.summary?.passed,
+      })
+    } catch (requestError) {
+      if (requestError?.code === 'ACCESS_DENIED') {
+        setAccessDenied(requestError)
+      } else {
+        setSubmitError(requestError.message || 'Could not submit this quiz.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.loadingWrap}>
+          <LoadingSpinner size="lg" label="Loading lesson quiz..." />
+        </div>
+      </div>
+    )
+  }
+
+  if (accessDenied) {
+    return (
+      <div className={styles.page}>
+        <section className={styles.emptyState}>
+          <Badge variant="warning" size="md">
+            Access required
+          </Badge>
+          <h1 className={styles.emptyTitle}>Quiz locked for this lesson</h1>
+          <p className={styles.emptyText}>
+            {accessDenied.message ||
+              'This quiz follows the same subscription access rules as the lesson watch page.'}
+          </p>
+          <div className={styles.emptyActions}>
+            <Button variant="primary" onClick={() => navigate('/subscription')}>
+              Open subscriptions
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(lessonHref)}>
+              Back to lesson
+            </Button>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  if (error || !video || !quiz) {
+    return (
+      <div className={styles.page}>
+        {error ? <ErrorMessage message={error} /> : null}
+
+        <section className={styles.emptyState}>
+          <Badge variant="info" size="md">
+            Quiz unavailable
+          </Badge>
+          <h1 className={styles.emptyTitle}>Quiz unavailable for this lesson</h1>
+          <p className={styles.emptyText}>
+            This lesson could not be loaded well enough to show a quiz or fallback quiz.
+          </p>
+          <div className={styles.emptyActions}>
+            <Button variant="primary" onClick={() => navigate(lessonHref)}>
+              Back to lesson
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/dashboard')}>
+              Go to dashboard
+            </Button>
+          </div>
+        </section>
+      </div>
+    )
   }
 
   if (submitted) {
-    const correct = questions.filter(q => selectedAnswers[q.id] === q.correctIndex).length
-    const score = Math.round((correct / questions.length) * 100)
-    const passed = score >= QUIZ_PASS_SCORE
-
     return (
       <div className={styles.page}>
-        <div className={styles.results}>
-          <span className={styles.resultEmoji} aria-hidden="true">
-            {passed ? (
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-              </svg>
-            ) : (
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-            )}
-          </span>
-          <h1 className={styles.resultTitle}>{passed ? 'Quiz Passed!' : 'Keep Learning!'}</h1>
-          <div className={styles.scoreCircle}>
-            <span className={`${styles.scoreNum} ${passed ? styles.scorePassed : styles.scoreFailed}`}>
+        <section className={styles.hero}>
+          <div className={styles.heroCopy}>
+            <Badge variant="info" size="md">
+              {quiz.source === 'local_fallback' ? 'Local fallback quiz' : 'Backend quiz result'}
+            </Badge>
+            <h1 className={styles.title}>Quiz summary for {video.title}</h1>
+            <p className={styles.subtitle}>
+              {quiz.source === 'local_fallback'
+                ? 'This result is stored locally because the backend quiz service was unavailable for this lesson.'
+                : 'This result comes from the backend quiz submission endpoint and is saved with your lesson history.'}
+            </p>
+          </div>
+
+          <div className={styles.scorePanel}>
+            <span className={styles.scoreLabel}>Score</span>
+            <strong
+              className={`${styles.scoreValue} ${
+                passed ? styles.scorePassed : styles.scoreFailed
+              }`}
+            >
               {score}%
+            </strong>
+            <span className={styles.scoreText}>
+              {activeResult.summary?.correct_count || 0} of {activeResult.summary?.question_count || questions.length} correct
             </span>
           </div>
-          <p className={styles.scoreDetail}>{correct} / {questions.length} correct</p>
-          <Badge variant={passed ? 'success' : 'warning'} size="md">
-            {passed ? 'Passed' : `Need ${QUIZ_PASS_SCORE}% to pass`}
-          </Badge>
-          <div className={styles.resultActions}>
-            <Button variant="secondary" onClick={() => { setSubmitted(false); setCurrentIdx(0); setSelectedAnswers({}) }}>
-              Retake quiz
-            </Button>
-            <Button variant="primary" onClick={() => window.history.back()}>
-              Back to video
-            </Button>
+        </section>
+
+        <section className={styles.summaryGrid}>
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Result</span>
+            <strong className={styles.summaryValue}>
+              {passed ? 'Passed' : 'Keep studying'}
+            </strong>
+            <span className={styles.summaryText}>
+              {passed
+                ? 'You reached the passing threshold for this quiz.'
+                : `A score of ${passScore}% is needed to pass.`}
+            </span>
+          </article>
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Saved attempt</span>
+            <strong className={styles.summaryValue}>
+              {previousAttempt ? `${previousAttempt.score}%` : 'None yet'}
+            </strong>
+            <span className={styles.summaryText}>
+              {previousAttempt
+                ? `Last saved ${new Date(previousAttempt.submitted_at || previousAttempt.takenAt).toLocaleDateString()}`
+                : 'This result becomes your first saved quiz attempt.'}
+            </span>
+          </article>
+          <article className={styles.summaryCard}>
+            <span className={styles.summaryLabel}>Next step</span>
+            <strong className={styles.summaryValue}>
+              {nextPlaylistItem ? 'Continue path' : 'Return to lesson'}
+            </strong>
+            <span className={styles.summaryText}>
+              {nextPlaylistItem
+                ? `Move to lesson ${currentPlaylistIndex + 2} in ${activePlaylist?.title}.`
+                : 'Review the lesson, keep exploring, or retake this quiz.'}
+            </span>
+          </article>
+        </section>
+
+        <section className={styles.reviewPanel}>
+          <div className={styles.panelHeader}>
+            <div>
+              <p className={styles.panelEyebrow}>Answer review</p>
+              <h2 className={styles.panelTitle}>
+                {quiz.source === 'local_fallback'
+                  ? 'Prototype question breakdown'
+                  : 'Backend question breakdown'}
+              </h2>
+            </div>
           </div>
-        </div>
+
+          <div className={styles.reviewList}>
+            {reviewItems.map((item) => (
+              <article key={item.question_id} className={styles.reviewCard}>
+                  <div className={styles.reviewHeader}>
+                    <span className={styles.reviewNumber}>Q{item.index + 1}</span>
+                    <Badge variant={item.correct ? 'success' : 'warning'} size="sm">
+                      {item.correct ? 'Correct' : 'Review'}
+                    </Badge>
+                  </div>
+                  <h3 className={styles.reviewQuestion}>{item.question}</h3>
+                  <p className={styles.reviewAnswer}>
+                    Your answer: <strong>{item.selectedLabel}</strong>
+                  </p>
+                  <p className={styles.reviewAnswer}>
+                    Correct answer: <strong>{item.correctLabel}</strong>
+                  </p>
+                  {item.explanation ? (
+                    <p className={styles.reviewExplanation}>{item.explanation}</p>
+                  ) : null}
+                </article>
+            ))}
+          </div>
+
+          <div className={styles.resultActions}>
+            <Button variant="secondary" onClick={handleReset}>
+              {quiz.source === 'local_fallback' ? 'Retake fallback quiz' : 'Retake quiz'}
+            </Button>
+            <Button variant="primary" onClick={() => navigate(lessonHref)}>
+              Back to lesson
+            </Button>
+            {activePlaylist ? (
+              <Button variant="primary" onClick={() => navigate(continueHref)}>
+                {nextPlaylistItem ? 'Continue learning path' : 'Return to playlist'}
+              </Button>
+            ) : null}
+          </div>
+        </section>
       </div>
     )
   }
 
   return (
     <div className={styles.page}>
-      <div className={styles.quizCard}>
-        {/* Quiz progress */}
-        <div className={styles.progress}>
-          <span className={styles.progressText}>Question {currentIdx + 1} of {questions.length}</span>
-          <div className={styles.progressBar}>
-            <div
-              className={styles.progressFill}
-              style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
-            />
+      <section className={styles.hero}>
+        <div className={styles.heroCopy}>
+          <div className={styles.badgeRow}>
+            <Badge variant="info" size="md">
+              {quiz.source === 'local_fallback'
+                ? 'Local fallback quiz'
+                : quiz.mode === 'static'
+                  ? 'Backend quiz'
+                  : 'Backend prototype quiz'}
+            </Badge>
+            {accessMetadata.tierLevel > 0 ? (
+              <Badge variant="warning" size="md">
+                {accessMetadata.badgeLabel}
+              </Badge>
+            ) : (
+              <Badge variant="default" size="md">
+                {accessMetadata.badgeLabel}
+              </Badge>
+            )}
+            {activePlaylist ? (
+              <Badge variant="primary" size="md">
+                From learning path
+              </Badge>
+            ) : null}
           </div>
+          <h1 className={styles.title}>
+            {truncate(quiz.title || `Quiz for ${video.title}`, 72)}
+          </h1>
+          <p className={styles.subtitle}>
+            {quiz.source === 'local_fallback'
+              ? 'The backend quiz service could not be loaded, so this lesson is using a local prototype fallback.'
+              : quiz.description || 'This quiz is delivered from the backend lesson quiz contract.'}
+          </p>
         </div>
 
-        <h2 className={styles.question}>{current.question}</h2>
+        <div className={styles.heroActions}>
+          <Button variant="secondary" onClick={() => navigate(lessonHref)}>
+            Back to lesson
+          </Button>
+        </div>
+      </section>
 
-        <ul className={styles.options}>
-          {current.options.map((opt, idx) => (
-            <li key={idx}>
-              <button
-                type="button"
-                className={`${styles.option} ${selectedAnswers[current.id] === idx ? styles.optionSelected : ''}`}
-                onClick={() => handleSelect(idx)}
-              >
-                <span className={styles.optionLetter}>{String.fromCharCode(65 + idx)}</span>
-                {opt}
-              </button>
-            </li>
-          ))}
-        </ul>
+      <section className={styles.contextGrid}>
+        <article className={styles.contextCard}>
+          <div className={styles.lessonThumb}>
+            {video.thumbnail_url ? (
+              <img
+                src={video.thumbnail_url}
+                alt={`Thumbnail for ${video.title}`}
+                className={styles.lessonImage}
+              />
+            ) : (
+              <div className={styles.lessonPlaceholder} aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="7 5 19 12 7 19 7 5" />
+                </svg>
+              </div>
+            )}
+          </div>
+          <div className={styles.lessonBody}>
+            <span className={styles.contextLabel}>Lesson context</span>
+            <strong className={styles.contextTitle}>{video.title}</strong>
+            <p className={styles.contextText}>
+              {video.description
+                ? truncate(video.description, 150)
+                : 'No lesson description is available, so quiz context leans on title and platform metadata.'}
+            </p>
+            <div className={styles.contextMeta}>
+              <span>{getCategoryLabel(video)}</span>
+              <span>{getCreatorName(video)}</span>
+              <span>{formatViewCount(video.views)} views</span>
+              {video.created_at ? <span>{formatNumericDate(video.created_at)}</span> : null}
+            </div>
+            <p className={styles.contextNote}>{fallbackNotice || accessMetadata.note}</p>
+          </div>
+        </article>
+
+        <article className={styles.contextCard}>
+          <span className={styles.contextLabel}>Learning status</span>
+          <div className={styles.summaryMiniList}>
+            <div className={styles.summaryMiniItem}>
+              <strong className={styles.summaryMiniValue}>
+                {Math.round(lessonProgress.percent || 0)}%
+              </strong>
+              <span className={styles.summaryMiniText}>Lesson progress</span>
+            </div>
+            <div className={styles.summaryMiniItem}>
+              <strong className={styles.summaryMiniValue}>
+                {previousAttempt ? `${previousAttempt.score}%` : '--'}
+              </strong>
+              <span className={styles.summaryMiniText}>
+                {quiz.source === 'local_fallback' ? 'Previous local score' : 'Latest saved attempt'}
+              </span>
+            </div>
+            <div className={styles.summaryMiniItem}>
+              <strong className={styles.summaryMiniValue}>
+                {activePlaylist
+                  ? activePlaylist.title
+                  : playlistContextUnavailable
+                    ? 'Playlist unavailable'
+                    : 'Standalone lesson'}
+              </strong>
+              <span className={styles.summaryMiniText}>Launch context</span>
+            </div>
+          </div>
+          {playlistContextUnavailable ? (
+            <p className={styles.contextNote}>
+              The requested playlist context is not available in your current learning
+              paths, so this quiz is continuing as a standalone lesson.
+            </p>
+          ) : null}
+        </article>
+      </section>
+
+      <section className={styles.quizCard}>
+        <div className={styles.progressHeader}>
+          <div>
+            <p className={styles.panelEyebrow}>
+              {quiz.source === 'local_fallback' ? 'Prototype questions' : 'Quiz questions'}
+            </p>
+            <h2 className={styles.panelTitle}>
+              Question {questions.length > 0 ? currentIdx + 1 : 0} of {questions.length}
+            </h2>
+          </div>
+          <span className={styles.progressCopy}>
+            {questions.length > 0
+              ? `${Math.round(((currentIdx + 1) / questions.length) * 100)}% through quiz`
+              : 'No questions available'}
+          </span>
+        </div>
+
+        <div className={styles.progressBar} aria-hidden="true">
+          <span
+            className={styles.progressFill}
+            style={{
+              width: `${questions.length > 0 ? ((currentIdx + 1) / questions.length) * 100 : 0}%`,
+            }}
+          />
+        </div>
+
+        {currentQuestion ? (
+          <article className={styles.questionCard}>
+            <h3 className={styles.question}>{currentQuestion.question}</h3>
+            <p className={styles.questionText}>{currentQuestion.explanation}</p>
+
+            <ul className={styles.options}>
+              {currentQuestion.options.map((option, index) => (
+                <li key={option}>
+                  <button
+                    type="button"
+                    className={`${styles.option} ${
+                      selectedAnswers[currentQuestion.id] === index
+                        ? styles.optionSelected
+                        : ''
+                    }`}
+                    onClick={() => handleSelect(index)}
+                  >
+                    <span className={styles.optionLetter}>
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <span>{option}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ) : (
+          <article className={styles.questionCard}>
+            <h3 className={styles.question}>Quiz unavailable for this lesson</h3>
+            <p className={styles.questionText}>
+              This lesson does not have enough quiz content to continue right now.
+            </p>
+          </article>
+        )}
+
+        {submitError ? <ErrorMessage message={submitError} /> : null}
 
         <div className={styles.actions}>
-          {!isLast ? (
+          <Button variant="secondary" onClick={() => navigate(lessonHref)}>
+            Pause quiz
+          </Button>
+
+          {currentIdx < questions.length - 1 ? (
             <Button
               variant="primary"
-              disabled={selectedAnswers[current.id] == null}
+              disabled={selectedAnswers[currentQuestion?.id] == null}
               onClick={handleNext}
             >
-              Next question →
+              Next question
             </Button>
           ) : (
             <Button
               variant="primary"
-              disabled={selectedAnswers[current.id] == null}
+              disabled={
+                selectedAnswers[currentQuestion?.id] == null || submitting || !currentQuestion
+              }
               onClick={handleSubmit}
             >
-              Submit quiz
+              {submitting
+                ? 'Submitting...'
+                : quiz.source === 'local_fallback'
+                  ? 'Submit fallback quiz'
+                  : 'Submit quiz'}
             </Button>
           )}
         </div>
-      </div>
+      </section>
     </div>
   )
 }

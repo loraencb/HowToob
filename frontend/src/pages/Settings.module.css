@@ -1,0 +1,350 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero,
+.panel,
+.successBanner,
+.emptyState {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%),
+    var(--color-bg-secondary);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.9fr);
+  gap: var(--space-xl);
+  padding: var(--space-2xl);
+  align-items: end;
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.eyebrow,
+.metaLabel,
+.panelEyebrow,
+.fieldLabel,
+.statusBadge {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.eyebrow,
+.panelEyebrow {
+  margin: 0;
+  color: var(--color-primary-light);
+}
+
+.title,
+.panelTitle,
+.emptyTitle {
+  margin: 0;
+  color: var(--color-text-light);
+}
+
+.title {
+  font-family: var(--font-family-heading);
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.subtitle,
+.panelText,
+.emptyText,
+.infoText,
+.reportMeta,
+.reportDetails,
+.reportFootnote {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.heroMeta {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.metaCard {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(14, 33, 56, 0.64);
+}
+
+.metaLabel {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--color-text-muted);
+}
+
+.metaValue,
+.fieldValue,
+.preferenceTitle,
+.reportTitle,
+.infoTitle {
+  color: var(--color-text-light);
+}
+
+.metaValue {
+  font-size: var(--font-size-lg);
+}
+
+.successBanner {
+  padding: 0.95rem 1.1rem;
+  color: var(--color-text-light);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.accountField,
+.infoItem,
+.reportCard {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(14, 33, 56, 0.64);
+}
+
+.accountField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  color: var(--color-text-muted);
+}
+
+.fieldValue {
+  font-size: var(--font-size-lg);
+}
+
+.inlineActions,
+.reportActions,
+.formActions,
+.inlineActionsColumn {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.inlineActionsColumn {
+  flex-direction: column;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.preferenceList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.preferenceRow,
+.selectRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(14, 33, 56, 0.64);
+}
+
+.selectRow {
+  grid-template-columns: 1fr;
+}
+
+.preferenceCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.preferenceDescription {
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
+
+.select {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: rgba(14, 33, 56, 0.9);
+  color: var(--color-text-light);
+  font: inherit;
+  padding: 0.9rem 1rem;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16);
+}
+
+.reportList,
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.reportHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-tint-strong);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
+  color: var(--color-text-light);
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-2xl);
+}
+
+.primaryButton,
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.primaryButton {
+  border: none;
+  background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
+  color: white;
+  cursor: pointer;
+}
+
+.secondaryLink {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--color-text-light);
+  cursor: pointer;
+}
+
+.primaryButton:hover,
+.secondaryLink:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.centerState {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 5rem 0;
+}
+
+.primaryButton:focus-visible,
+.secondaryLink:focus-visible,
+.select:focus-visible,
+.checkbox:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .hero,
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .accountGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero,
+  .panel,
+  .emptyState {
+    padding: var(--space-lg);
+  }
+
+  .preferenceRow {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .inlineActions,
+  .reportActions,
+  .formActions {
+    flex-direction: column;
+  }
+}

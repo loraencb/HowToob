@@ -2,40 +2,57 @@
   /* ═══ COLORS ═══ */
 
   /* Primary Brand */
-  --color-primary: #BA190B;
-  --color-primary-hover: #9E1509;
-  --color-primary-light: #D41E0D;
+  --color-primary: #4f8cff;
+  --color-primary-hover: #3d79ea;
+  --color-primary-light: #8ec5ff;
+  --color-primary-rgb: 79, 140, 255;
+  --color-accent: #67d4ff;
+  --color-accent-rgb: 103, 212, 255;
 
   /* Backgrounds */
-  --color-bg-dark: #13090A;
-  --color-bg-secondary: #1C1112;
-  --color-bg-elevated: #271619;
+  --color-bg-dark: #081423;
+  --color-bg-secondary: #0f1e33;
+  --color-bg-elevated: #162944;
+  --color-bg-surface: #1d3453;
+  --color-bg-overlay: rgba(8, 20, 35, 0.78);
 
   /* Text */
-  --color-text-light: #F8F9FA;
-  --color-text-muted: #A0A0A0;
-  --color-text-dark: #2E2E31;
+  --color-text-light: #eef5ff;
+  --color-text-muted: #9db1ca;
+  --color-text-dark: #10213a;
 
   /* Borders */
-  --color-border: #3A2022;
-  --color-border-focus: #E63946;
+  --color-border: rgba(137, 170, 214, 0.18);
+  --color-border-strong: rgba(137, 170, 214, 0.34);
+  --color-border-focus: #8ec5ff;
+  --color-surface-tint: rgba(79, 140, 255, 0.08);
+  --color-surface-tint-strong: rgba(79, 140, 255, 0.14);
+  --color-surface-highlight: rgba(103, 212, 255, 0.1);
 
   /* Status Colors */
-  --color-success: #06D6A0;
-  --color-warning: #FF9F1C;
-  --color-error: #D62839;
-  --color-info: #2EC4B6;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #fb7185;
+  --color-info: #67d4ff;
 
   /* Progress & Quiz */
-  --color-progress-bg: #3A3A3D;
-  --color-progress-fill: #06D6A0;
-  --color-quiz-correct: #06D6A0;
-  --color-quiz-incorrect: #E63946;
+  --color-progress-bg: rgba(157, 177, 202, 0.18);
+  --color-progress-fill: #67d4ff;
+  --color-quiz-correct: #34d399;
+  --color-quiz-incorrect: #fb7185;
 
   /* Subscription Tiers */
-  --color-tier-free: #A0A0A0;
-  --color-tier-mid: #2EC4B6;
-  --color-tier-premium: #FFD700;
+  --color-tier-free: #a7b7cc;
+  --color-tier-mid: #67d4ff;
+  --color-tier-premium: #f6c86e;
+  --gradient-page:
+    radial-gradient(circle at top, rgba(79, 140, 255, 0.16), transparent 36%),
+    radial-gradient(circle at 85% 12%, rgba(103, 212, 255, 0.1), transparent 28%);
+  --gradient-panel:
+    radial-gradient(circle at top right, rgba(79, 140, 255, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(79, 140, 255, 0.12), rgba(22, 41, 68, 0.96));
+  --gradient-primary: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
+  --gradient-primary-soft: linear-gradient(90deg, var(--color-primary), var(--color-accent));
 
   /* ═══ SPACING ═══ */
   --space-xs: 0.25rem;   /* 4px */
@@ -70,23 +87,23 @@
   --line-height-relaxed: 1.75;
 
   /* ═══ BORDER RADIUS ═══ */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
   --radius-full: 9999px;
 
   /* ═══ SHADOWS ═══ */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.6);
-  --shadow-focus: 0 0 0 3px rgba(186, 25, 11, 0.3);
+  --shadow-sm: 0 8px 18px rgba(3, 11, 24, 0.2);
+  --shadow-md: 0 14px 28px rgba(3, 11, 24, 0.28);
+  --shadow-lg: 0 18px 40px rgba(3, 11, 24, 0.34);
+  --shadow-xl: 0 26px 60px rgba(3, 11, 24, 0.42);
+  --shadow-focus: 0 0 0 3px rgba(79, 140, 255, 0.24);
 
   /* ═══ TRANSITIONS ═══ */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 400ms ease;
+  --transition-fast: 180ms ease;
+  --transition-normal: 260ms ease;
+  --transition-slow: 420ms ease;
 
   /* ═══ Z-INDEX LAYERS ═══ */
   --z-base: 1;

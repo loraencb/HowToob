@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import ErrorMessage from './ErrorMessage'
 import LoadingSpinner from './LoadingSpinner'
 
 /**
@@ -10,12 +11,26 @@ import LoadingSpinner from './LoadingSpinner'
  *   <ProtectedRoute role="creator"> requires creator role
  */
 export default function ProtectedRoute({ children, role }) {
-  const { isAuthenticated, loading, user } = useAuth()
+  const { isAuthenticated, loading, user, authError, checkAuth } = useAuth()
   const location = useLocation()
 
   // Still checking session on mount, show spinner instead of flashing redirect
   if (loading) {
     return <LoadingSpinner size="fullPage" label="Checking session…" />
+  }
+
+  if (!isAuthenticated && authError) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        minHeight: '60vh',
+        padding: '2rem',
+      }}>
+        <ErrorMessage message={authError} onRetry={checkAuth} />
+      </div>
+    )
   }
 
   // Not logged in → redirect to login, preserving intended destination

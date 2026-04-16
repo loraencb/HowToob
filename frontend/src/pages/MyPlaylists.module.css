@@ -1,0 +1,352 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+.hero,
+.panel,
+.playlistCard {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%),
+    var(--color-bg-secondary);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  align-items: flex-start;
+  padding: var(--space-2xl);
+  border-color: var(--color-border-strong);
+  background: var(--gradient-panel);
+}
+
+.heroCopy {
+  max-width: 720px;
+}
+
+.eyebrow,
+.panelEyebrow {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-primary-light);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.title,
+.panelTitle,
+.sectionTitle,
+.cardTitle,
+.emptyTitle {
+  margin: 0;
+  color: var(--color-text-light);
+}
+
+.subtitle,
+.noteText,
+.tipText,
+.suggestionMeta,
+.cardDescription,
+.updatedText,
+.emptyText {
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+.subtitle {
+  margin-top: var(--space-sm);
+  max-width: 64ch;
+}
+
+.heroNote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 320px;
+}
+
+.localBadge,
+.defaultBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-tint-strong);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
+  color: var(--color-text-light);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.92fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.panel,
+.playlistCard {
+  padding: var(--space-xl);
+}
+
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.panelHeader,
+.sectionHeader,
+.cardTopRow,
+.cardFooter,
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.label,
+.statLabel {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: rgba(14, 33, 56, 0.86);
+  color: var(--color-text-light);
+  font: inherit;
+  padding: 0.95rem 1rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.textarea {
+  min-height: 132px;
+  resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16);
+}
+
+.formError {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.formActions {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.primaryButton,
+.secondaryButton,
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.primaryButton {
+  border: none;
+  color: #fff;
+  background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
+  box-shadow: 0 12px 22px rgba(var(--color-primary-rgb), 0.28);
+  cursor: pointer;
+}
+
+.primaryButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(var(--color-primary-rgb), 0.34);
+}
+
+.secondaryButton,
+.inlineLink {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface-tint);
+  color: var(--color-text-light);
+}
+
+.secondaryButton:hover,
+.inlineLink:hover {
+  color: #fff;
+  border-color: rgba(var(--color-primary-rgb), 0.34);
+  background: var(--color-surface-tint-strong);
+}
+
+.tipList,
+.suggestionList {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.tipItem,
+.suggestionCard,
+.emptyCard {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(14, 33, 56, 0.64);
+}
+
+.tipLabel,
+.statValue {
+  color: var(--color-text-light);
+}
+
+.suggestionCard {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.suggestionTitle {
+  color: var(--color-text-light);
+  font-weight: var(--font-weight-semibold);
+}
+
+.suggestionTitle:hover {
+  color: var(--color-primary-light);
+}
+
+.loadingWrap {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xl) 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.playlistGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.playlistCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.cardDescription {
+  margin-top: var(--space-sm);
+}
+
+.statRow {
+  align-items: stretch;
+}
+
+.statBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.progressTrack {
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-primary-soft);
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero,
+  .panel,
+  .playlistCard {
+    padding: var(--space-xl);
+  }
+
+  .hero,
+  .panelHeader,
+  .sectionHeader,
+  .cardTopRow,
+  .cardFooter,
+  .suggestionCard,
+  .statRow,
+  .formActions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .secondaryButton,
+  .primaryButton,
+  .inlineLink {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .playlistGrid {
+    grid-template-columns: 1fr;
+  }
+}
