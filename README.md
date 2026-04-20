@@ -220,8 +220,10 @@ Set these on the DigitalOcean web service:
 HOST=0.0.0.0
 PORT=8080
 DEBUG=false
+APP_ENV=production
 SECRET_KEY=<long-random-secret>
 DATABASE_URL=${howtoob-db.DATABASE_URL}
+REQUIRE_DATABASE_URL=true
 DB_STARTUP_RETRIES=10
 DB_STARTUP_RETRY_SECONDS=3
 SERVE_FRONTEND_BUILD=true
@@ -278,6 +280,9 @@ DigitalOcean UI.
   the deployed container.
 - The app currently creates tables on startup as a safety net. Migrations are included,
   but this MVP deployment does not require a separate migration job for a fresh database.
+- In production, `REQUIRE_DATABASE_URL=true` prevents the app from silently falling
+  back to SQLite. If `DATABASE_URL` is missing or not PostgreSQL, startup fails loudly
+  so metadata does not disappear on redeploy.
 
 ### If deployment exits immediately
 

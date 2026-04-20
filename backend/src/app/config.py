@@ -45,6 +45,14 @@ def normalize_database_url(database_url):
     return normalized
 
 
+def build_database_uri():
+    database_url = str(os.getenv("DATABASE_URL") or "").strip()
+    if database_url:
+        return normalize_database_url(database_url), "env"
+
+    return "sqlite:///app.db", "fallback"
+
+
 def build_cors_allowed_origins():
     origins = []
 
@@ -72,13 +80,22 @@ def build_cors_allowed_origins():
 
 DEFAULT_DEBUG = parse_bool(os.getenv("DEBUG"), True)
 ROOT_DIR = Path(__file__).resolve().parents[3]
+DATABASE_URI, DATABASE_URI_SOURCE = build_database_uri()
+APP_ENV = os.getenv(
+    "APP_ENV",
+    "development" if DEFAULT_DEBUG else "production",
+).strip().lower()
 
 
 class Config:
+    APP_ENV = APP_ENV
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 
-    SQLALCHEMY_DATABASE_URI = normalize_database_url(
-        os.getenv("DATABASE_URL", "sqlite:///app.db")
+    SQLALCHEMY_DATABASE_URI = DATABASE_URI
+    SQLALCHEMY_DATABASE_URI_SOURCE = DATABASE_URI_SOURCE
+    REQUIRE_DATABASE_URL = parse_bool(
+        os.getenv("REQUIRE_DATABASE_URL"),
+        APP_ENV in {"production", "staging"},
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DB_STARTUP_RETRIES = parse_int(os.getenv("DB_STARTUP_RETRIES"), 5)

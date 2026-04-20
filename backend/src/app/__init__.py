@@ -88,6 +88,23 @@ def validate_database_config(app):
             "database component value, for example ${howtoob-db.DATABASE_URL} in the App Platform UI."
         )
 
+    require_database_url = bool(app.config.get("REQUIRE_DATABASE_URL"))
+    is_testing = bool(app.config.get("TESTING"))
+    uri_source = app.config.get("SQLALCHEMY_DATABASE_URI_SOURCE")
+    uses_postgres = database_uri.startswith("postgresql://") or database_uri.startswith("postgresql+")
+
+    if require_database_url and not is_testing and uri_source != "env":
+        raise RuntimeError(
+            "DATABASE_URL is required outside local development. "
+            "The app would otherwise fall back to SQLite, which is not persistent on DigitalOcean App Platform."
+        )
+
+    if require_database_url and not is_testing and not uses_postgres:
+        raise RuntimeError(
+            "Production database configuration must use PostgreSQL. "
+            "Set DATABASE_URL to the DigitalOcean PostgreSQL bindable variable."
+        )
+
 
 def initialize_database(app):
     attempts = max(1, int(app.config.get("DB_STARTUP_RETRIES", 5) or 5))

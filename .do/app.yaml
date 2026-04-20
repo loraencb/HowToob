@@ -25,12 +25,20 @@ services:
         value: "false"
         scope: RUN_TIME
         type: GENERAL
+      - key: APP_ENV
+        value: "production"
+        scope: RUN_TIME
+        type: GENERAL
       - key: SECRET_KEY
         value: "replace-this-in-digitalocean"
         scope: RUN_TIME
         type: SECRET
       - key: DATABASE_URL
         value: "${howtoob-db.DATABASE_URL}"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: REQUIRE_DATABASE_URL
+        value: "true"
         scope: RUN_TIME
         type: GENERAL
       - key: DB_STARTUP_RETRIES
