@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import Badge from '../components/common/Badge'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
+import ProgressBar from '../components/common/ProgressBar'
 import { useProgress } from '../context/ProgressContext'
 import useLocalPreferences from '../hooks/useLocalPreferences'
 import { CATEGORIES } from '../utils/constants'
@@ -355,12 +357,18 @@ export default function Search() {
                 preferences.compactCardLayout ? styles.resultsGridCompact : ''
               }`}
             >
-                {filteredVideos.map((video) => {
-                  const progressEntry = progress[String(video.id)]
+              {filteredVideos.map((video) => {
+                const progressEntry = progress[String(video.id)]
                 const categoryMetadata = getCategoryMetadata(video.category)
                 const level = inferLearningLevel(video)
                 const accessMetadata = getAccessMetadata(video)
                 const profileSlug = getCreatorProfileSlug(video)
+                const accessVariant =
+                  accessMetadata.tierLevel > 1
+                    ? 'tier-premium'
+                    : accessMetadata.tierLevel > 0
+                      ? 'tier-mid'
+                      : 'tier-free'
 
                 return (
                   <article key={video.id} className={styles.resultCard}>
@@ -384,18 +392,22 @@ export default function Search() {
                       )}
 
                       <div className={styles.badgeRow}>
-                        <span className={styles.resultBadge}>
+                        <Badge variant="primary" className={styles.resultBadge}>
                           {getCategoryPrimaryLabel(video)}
-                        </span>
+                        </Badge>
                         {categoryMetadata.primaryValue && categoryMetadata.value !== categoryMetadata.primaryValue ? (
-                          <span className={styles.resultBadge}>{getCategoryLabel(video)}</span>
+                          <Badge variant="info" className={styles.resultBadge}>
+                            {getCategoryLabel(video)}
+                          </Badge>
                         ) : null}
-                        <span className={styles.resultBadge}>{level}</span>
-                        <span className={styles.resultBadge}>{accessMetadata.badgeLabel}</span>
+                        <Badge variant="default" className={styles.resultBadge}>{level}</Badge>
+                        <Badge variant={accessVariant} className={styles.resultBadge}>
+                          {accessMetadata.badgeLabel}
+                        </Badge>
                         {preferences.showProgressBadges && progressEntry ? (
-                          <span className={`${styles.resultBadge} ${styles.progressBadge}`}>
+                          <Badge variant="success" className={`${styles.resultBadge} ${styles.progressBadge}`}>
                             {getProgressLabel(progressEntry.percent)}
-                          </span>
+                          </Badge>
                         ) : null}
                       </div>
                     </Link>
@@ -431,6 +443,22 @@ export default function Search() {
                       </p>
 
                       <p className={styles.footerNote}>{accessMetadata.note}</p>
+
+                      {progressEntry ? (
+                        <ProgressBar
+                          value={progressEntry.percent}
+                          label={`${video.title} progress`}
+                          detail={
+                            progressEntry.completed
+                              ? 'Completed'
+                              : `${Math.round(progressEntry.percent)}% watched`
+                          }
+                          showLabel
+                          size="sm"
+                          variant={progressEntry.completed ? 'success' : 'primary'}
+                          className={styles.searchProgress}
+                        />
+                      ) : null}
 
                       <div className={styles.cardFooter}>
                         <span className={styles.footerNote}>

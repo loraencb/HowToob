@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import VideoCard from '../components/common/VideoCard'
 import ErrorMessage from '../components/common/ErrorMessage'
 import LoadingSpinner from '../components/common/LoadingSpinner'
+import ProgressBar from '../components/common/ProgressBar'
 import { useAuth } from '../context/AuthContext'
 import { useProgress } from '../context/ProgressContext'
 import { usePlaylists } from '../context/PlaylistContext'
@@ -319,34 +320,22 @@ export default function Dashboard() {
                         : 'You have not started a lesson in this session yet, so this card is highlighting a strong place to jump back in.'}
                     </p>
 
-                    <div className={styles.progressRow}>
-                      <div
-                        className={styles.progressTrack}
-                        aria-label="Lesson progress"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        aria-valuenow={Math.round(continueCard.progress?.percent || 0)}
-                        role="progressbar"
-                      >
-                        <span
-                          className={styles.progressFill}
-                          style={{
-                            width: continueCard.progress
-                              ? `${Math.max(8, Math.round(continueCard.progress.percent))}%`
-                              : '0%',
-                          }}
-                        />
-                      </div>
-                      <span className={styles.progressCopy}>
-                        {continueCard.progress
+                    <ProgressBar
+                      value={continueCard.progress?.percent || 0}
+                      label="Lesson progress"
+                      detail={
+                        continueCard.progress
                           ? `${Math.round(continueCard.progress.percent)}% watched`
-                          : 'Not started yet'}
-                      </span>
-                    </div>
+                          : 'Not started yet'
+                      }
+                      showLabel
+                      size="md"
+                      className={styles.progressRow}
+                    />
 
                     <div className={styles.continueMeta}>
                       <span>{formatViewCount(continueCard.video.views || 0)} views</span>
-                      <span className={styles.metaDot}>•</span>
+                      <span className={styles.metaDot}>|</span>
                       <span>{formatRatingSummary(continueCard.video.average_rating, continueCard.video.rating_count ?? continueCard.video.like_count)}</span>
                       <span>|</span>
                       <span>{formatNumericDate(continueCard.video.created_at)}</span>
@@ -483,14 +472,14 @@ export default function Dashboard() {
                     </Link>
                     <p className={styles.recentText}>
                       {itemProgress
-                        ? `${Math.round(itemProgress.percent)}% watched • last active ${formatRelativeTime(
+                        ? `${Math.round(itemProgress.percent)}% watched | last active ${formatRelativeTime(
                             itemProgress.lastUpdated
                           )}`
                         : 'Watch progress will appear here once you start a lesson.'}
                     </p>
                     <div className={styles.recentMeta}>
                       <span>{formatViewCount(video.views || 0)} views</span>
-                      <span className={styles.metaDot}>•</span>
+                      <span className={styles.metaDot}>|</span>
                       <span>{formatRatingSummary(video.average_rating, video.rating_count ?? video.like_count)}</span>
                       <span>|</span>
                       <span>{formatNumericDate(video.created_at)}</span>
@@ -523,7 +512,11 @@ export default function Dashboard() {
             {subscriptionVideos.length > 0 ? (
               <div className={styles.videoGrid}>
                 {subscriptionVideos.map((video) => (
-                  <VideoCard key={video.id} video={video} />
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    progress={progressByVideoId.get(Number(video.id))}
+                  />
                 ))}
               </div>
             ) : (
@@ -550,7 +543,11 @@ export default function Dashboard() {
             {recommendedVideos.length > 0 ? (
               <div className={styles.videoGrid}>
                 {recommendedVideos.map((video) => (
-                  <VideoCard key={video.id} video={video} />
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    progress={progressByVideoId.get(Number(video.id))}
+                  />
                 ))}
               </div>
             ) : (
@@ -566,8 +563,8 @@ export default function Dashboard() {
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <div>
-                <p className={styles.sectionEyebrow}>Saved and planning</p>
-                <h2 className={styles.sectionTitle}>Features expanding next</h2>
+                <p className={styles.sectionEyebrow}>Saved learning</p>
+                <h2 className={styles.sectionTitle}>Learning paths and milestones</h2>
               </div>
             </div>
 
@@ -587,11 +584,11 @@ export default function Dashboard() {
               <article className={styles.placeholderCard}>
                 <h3 className={styles.placeholderTitle}>Milestones and streaks</h3>
                 <p className={styles.placeholderText}>
-                  Certificates, streaks, and deeper learning milestones will fit here
-                  as your learning profile expands.
+                  Certificates, streaks, and deeper learning milestones will sit here
+                  once those learning achievements are available.
                 </p>
                 <span className={styles.placeholderHint}>
-                  For now, this dashboard keeps the focus on active lessons, saved paths, and your next best step.
+                  This dashboard currently focuses on active lessons, saved paths, and your next best step.
                 </span>
               </article>
             </div>

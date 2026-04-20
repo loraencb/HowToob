@@ -13,6 +13,16 @@ import styles from './Upload.module.css'
 
 const ACCEPTED_VIDEO_EXTENSIONS = ['mp4']
 const ACCEPTED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg']
+const LEARNING_LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+]
+const ACCESS_TIER_OPTIONS = [
+  { value: '0', label: 'Free lesson' },
+  { value: '1', label: 'Tier 1 subscribers' },
+  { value: '2', label: 'Tier 2 subscribers' },
+]
 
 function getFileExtension(filename = '') {
   const parts = filename.split('.')
@@ -100,6 +110,8 @@ export default function Upload() {
   const [description, setDescription] = useState('')
   const [primaryCategory, setPrimaryCategory] = useState('')
   const [category, setCategory] = useState('')
+  const [learningLevel, setLearningLevel] = useState('')
+  const [accessTier, setAccessTier] = useState('0')
   const [videoFile, setVideoFile] = useState(null)
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [dragTarget, setDragTarget] = useState('')
@@ -119,6 +131,8 @@ export default function Upload() {
     setDescription('')
     setPrimaryCategory('')
     setCategory('')
+    setLearningLevel('')
+    setAccessTier('0')
     setVideoFile(null)
     setThumbnailFile(null)
     setFieldErrors({})
@@ -192,8 +206,14 @@ export default function Upload() {
       }
     }
 
-    if (primaryCategory && !category) {
+    if (!primaryCategory) {
+      nextErrors.category = 'Choose a predefined category for this lesson.'
+    } else if (!category) {
       nextErrors.category = 'Choose a topic under the selected category.'
+    }
+
+    if (!learningLevel) {
+      nextErrors.learningLevel = 'Choose the learning level for this lesson.'
     }
 
     return nextErrors
@@ -215,9 +235,9 @@ export default function Upload() {
     payload.append('description', description.trim())
     payload.append('video', videoFile)
 
-    if (category) {
-      payload.append('category', category)
-    }
+    payload.append('category', category)
+    payload.append('learning_level', learningLevel)
+    payload.append('access_tier', accessTier)
 
     if (thumbnailFile) {
       payload.append('thumbnail', thumbnailFile)
@@ -419,7 +439,7 @@ export default function Upload() {
                     </span>
                     <span id="video-upload-hint" className={styles.dropHint}>
                       {videoFile
-                        ? `${videoFile.name} • ${formatBytes(videoFile.size)}`
+                        ? `${videoFile.name} | ${formatBytes(videoFile.size)}`
                         : 'Drag an MP4 file here or click to browse'}
                     </span>
                   </div>
@@ -479,7 +499,7 @@ export default function Upload() {
                     </span>
                     <span id="thumbnail-upload-hint" className={styles.dropHint}>
                       {thumbnailFile
-                        ? `${thumbnailFile.name} • ${formatBytes(thumbnailFile.size)}`
+                        ? `${thumbnailFile.name} | ${formatBytes(thumbnailFile.size)}`
                         : 'Optional PNG or JPG image'}
                     </span>
                   </div>
@@ -585,6 +605,60 @@ export default function Upload() {
               </div>
             </div>
 
+            <div className={styles.categoryGrid}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.inputLabel} htmlFor="upload-learning-level">
+                  Learning level
+                </label>
+                <select
+                  id="upload-learning-level"
+                  className={styles.selectInput}
+                  value={learningLevel}
+                  onChange={(event) => {
+                    setLearningLevel(event.target.value)
+                    setFieldErrors((prev) => ({ ...prev, learningLevel: '' }))
+                  }}
+                  disabled={submitting}
+                >
+                  <option value="">Select a level</option>
+                  {LEARNING_LEVEL_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.learningLevel ? (
+                  <p className={styles.validationText}>{fieldErrors.learningLevel}</p>
+                ) : (
+                  <p className={styles.helperText}>
+                    Help learners understand the expected starting point before they press play.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.inputLabel} htmlFor="upload-access-tier">
+                  Access level
+                </label>
+                <select
+                  id="upload-access-tier"
+                  className={styles.selectInput}
+                  value={accessTier}
+                  onChange={(event) => setAccessTier(event.target.value)}
+                  disabled={submitting}
+                >
+                  {ACCESS_TIER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className={styles.helperText}>
+                  Choose whether this lesson is open to everyone or reserved for subscribers.
+                </p>
+              </div>
+            </div>
+
             <div className={styles.fieldGroup}>
               <label className={styles.inputLabel} htmlFor="upload-description">
                 Description
@@ -630,7 +704,7 @@ export default function Upload() {
             <ul className={styles.checklist}>
               <li>Make sure the video file is final and exported as MP4.</li>
               <li>Use a title that states the skill or outcome clearly.</li>
-              <li>Choose a category and topic label that match the lesson content.</li>
+              <li>Choose a category, topic, and level that match the lesson content.</li>
               <li>Add a thumbnail if you want the lesson to stand out in the feed.</li>
             </ul>
           </section>
@@ -644,11 +718,11 @@ export default function Upload() {
               </div>
               <div className={styles.ruleItem}>
                 <span className={styles.ruleLabel}>Required</span>
-                <span className={styles.ruleValue}>title, video</span>
+                <span className={styles.ruleValue}>title, video, category, learning level</span>
               </div>
               <div className={styles.ruleItem}>
                 <span className={styles.ruleLabel}>Optional</span>
-                <span className={styles.ruleValue}>description, thumbnail, predefined category tag</span>
+                <span className={styles.ruleValue}>description, thumbnail, subscriber access tier</span>
               </div>
             </div>
           </section>

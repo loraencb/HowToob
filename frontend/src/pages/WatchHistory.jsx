@@ -82,7 +82,7 @@ function renderStars(rating) {
       className={value <= rating ? styles.starFilled : styles.starEmpty}
       aria-hidden="true"
     >
-      ★
+      {value <= rating ? '★' : '☆'}
     </span>
   ))
 }

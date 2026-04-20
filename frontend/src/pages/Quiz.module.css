@@ -158,6 +158,12 @@
   color: var(--color-text-light);
 }
 
+.summaryValue {
+  margin-top: var(--space-xs);
+  font-family: var(--font-family-heading);
+  font-size: clamp(1.45rem, 2vw, 2.1rem);
+}
+
 .contextMeta {
   display: flex;
   flex-wrap: wrap;

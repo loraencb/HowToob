@@ -69,10 +69,9 @@ export function getAccessMetadata(video) {
   const backendLabel =
     subscription?.label || (tierLevel > 0 ? `Tier ${tierLevel} access` : 'Standard access')
   const backendNote =
-    subscription?.note ||
-    (tierLevel > 0
-      ? 'Requires a creator subscription at this tier or higher.'
-      : 'Included with standard lesson access.')
+    tierLevel > 0
+      ? subscription?.note || 'Requires a creator subscription at this tier or higher.'
+      : 'Available with standard lesson access.'
 
   return {
     tierLevel: Math.max(0, tierLevel),

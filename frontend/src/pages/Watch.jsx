@@ -1517,7 +1517,7 @@ export default function Watch() {
                   <span className={styles.authorName}>{video.author_name}</span>
                   <div className={styles.videoMeta}>
                     <span>{formatViewCount(video.views || 0)} views</span>
-                    <span className={styles.dotSeparator}>•</span>
+                    <span className={styles.dotSeparator}>|</span>
                     <span>{formatRatingSummary(video.average_rating, video.rating_count ?? video.like_count)}</span>
                     <span>|</span>
                     <span>{formatNumericDate(video.created_at)}</span>
@@ -1934,7 +1934,7 @@ export default function Watch() {
                   className={styles.commentInput}
                   value={commentDraft}
                   onChange={(event) => setCommentDraft(event.target.value)}
-                  placeholder="Share your thoughts about this tutorial..."
+                  placeholder="Share your thoughts about this lesson..."
                   rows={4}
                 />
                 <div className={styles.commentComposerActions}>

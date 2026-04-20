@@ -13,6 +13,18 @@ import {
   getPrimaryCategory,
 } from '../utils/categoryTaxonomy'
 
+const LEARNING_LEVEL_OPTIONS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+]
+
+const ACCESS_TIER_OPTIONS = [
+  { value: '0', label: 'Free lesson' },
+  { value: '1', label: 'Tier 1 subscribers' },
+  { value: '2', label: 'Tier 2 subscribers' },
+]
+
 function normalizeCreatorVideos(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.videos)) return data.videos
@@ -31,6 +43,8 @@ export default function CreatorDashboard() {
     description: '',
     primaryCategory: '',
     category: '',
+    learningLevel: '',
+    accessTier: '0',
   })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -121,6 +135,8 @@ export default function CreatorDashboard() {
       category: categoryMetadata.primaryValue && categoryMetadata.value !== categoryMetadata.primaryValue
         ? categoryMetadata.value
         : '',
+      learningLevel: video.learning_level || '',
+      accessTier: String(video.access_tier ?? video.tier_level ?? video.subscription?.tier_level ?? 0),
     })
     setActionMessage('')
     setActionError('')
@@ -128,7 +144,14 @@ export default function CreatorDashboard() {
 
   function handleCancelEdit() {
     setEditingId(null)
-    setEditForm({ title: '', description: '', primaryCategory: '', category: '' })
+    setEditForm({
+      title: '',
+      description: '',
+      primaryCategory: '',
+      category: '',
+      learningLevel: '',
+      accessTier: '0',
+    })
   }
 
   function handleRequestDelete(video) {
@@ -159,6 +182,8 @@ export default function CreatorDashboard() {
         title,
         description: editForm.description.trim(),
         category: editForm.category || editForm.primaryCategory || '',
+        learning_level: editForm.learningLevel || null,
+        access_tier: editForm.accessTier,
       })
 
       setVideos((prev) =>
@@ -760,6 +785,67 @@ export default function CreatorDashboard() {
                               {editForm.primaryCategory ? 'Select a topic' : 'Choose a category first'}
                             </option>
                             {(SUB_CATEGORIES[editForm.primaryCategory] || []).map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            Learning level
+                          </span>
+                          <select
+                            value={editForm.learningLevel}
+                            onChange={(event) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                learningLevel: event.target.value,
+                              }))
+                            }
+                            style={{
+                              width: '100%',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--color-border)',
+                              background: 'rgba(14, 33, 56, 0.88)',
+                              color: 'var(--color-text-light)',
+                              font: 'inherit',
+                              padding: '0.95rem 1rem',
+                            }}
+                          >
+                            <option value="">Select a level</option>
+                            {LEARNING_LEVEL_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            Access level
+                          </span>
+                          <select
+                            value={editForm.accessTier}
+                            onChange={(event) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                accessTier: event.target.value,
+                              }))
+                            }
+                            style={{
+                              width: '100%',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--color-border)',
+                              background: 'rgba(14, 33, 56, 0.88)',
+                              color: 'var(--color-text-light)',
+                              font: 'inherit',
+                              padding: '0.95rem 1rem',
+                            }}
+                          >
+                            {ACCESS_TIER_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>

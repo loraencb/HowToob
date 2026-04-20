@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ErrorMessage from '../components/common/ErrorMessage'
+import LessonCard from '../components/common/LessonCard'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import { useProgress } from '../context/ProgressContext'
 import { usePlaylists } from '../context/PlaylistContext'
 import { videosAPI } from '../utils/api'
-import {
-  formatNumericDate,
-  formatRatingSummary,
-  formatRelativeTime,
-  formatViewCount,
-  truncate,
-} from '../utils/formatters'
+import { formatRelativeTime } from '../utils/formatters'
 import styles from './Playlist.module.css'
 
 function normalizeVideoResponse(data) {
@@ -327,80 +322,15 @@ export default function Playlist() {
               {orderedLessons.length > 0 ? (
                 <div className={styles.lessonList}>
                   {orderedLessons.map(({ item, index, lesson, progress }) => (
-                    <article key={lesson.id} className={styles.lessonCard}>
-                      <div className={styles.lessonIndex}>{index + 1}</div>
-
-                      <Link
-                        to={`/watch/${lesson.id}?playlist=${playlist.id}`}
-                        className={styles.thumbnailLink}
-                      >
-                        {lesson.thumbnail_url ? (
-                          <img
-                            src={lesson.thumbnail_url}
-                            alt={`Thumbnail for ${lesson.title}`}
-                            className={styles.thumbnail}
-                          />
-                        ) : (
-                          <div className={styles.thumbnailPlaceholder} aria-hidden="true">
-                            <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
-                              <polygon points="7 5 19 12 7 19 7 5" />
-                            </svg>
-                          </div>
-                        )}
-                      </Link>
-
-                      <div className={styles.lessonBody}>
-                        <div className={styles.lessonHeader}>
-                          <div>
-                            <Link
-                              to={`/watch/${lesson.id}?playlist=${playlist.id}`}
-                              className={styles.lessonTitle}
-                            >
-                              {truncate(lesson.title, 80)}
-                            </Link>
-                            <p className={styles.lessonMeta}>
-                              {lesson.author_name} - {formatViewCount(lesson.views || 0)} views - {formatRatingSummary(lesson.average_rating, lesson.rating_count)}
-                              {lesson.created_at ? ` - ${formatNumericDate(lesson.created_at)}` : ''}
-                            </p>
-                          </div>
-                          <span className={styles.statusBadge}>
-                            {progress.completed
-                              ? 'Completed'
-                              : progress.percent > 0
-                                ? `${Math.round(progress.percent)}% watched`
-                                : 'Not started'}
-                          </span>
-                        </div>
-
-                        <p className={styles.lessonDescription}>
-                          {lesson.description || 'No lesson description available yet.'}
-                        </p>
-
-                        <div className={styles.progressTrack} aria-hidden="true">
-                          <span
-                            className={styles.progressFill}
-                            style={{ width: `${Math.round(progress.percent || 0)}%` }}
-                          />
-                        </div>
-
-                        <div className={styles.lessonActions}>
-                          <Link
-                            to={`/watch/${lesson.id}?playlist=${playlist.id}`}
-                            className={styles.inlineButton}
-                          >
-                            {progress.percent > 0 && !progress.completed ? 'Resume lesson' : 'Open lesson'}
-                          </Link>
-                          <button
-                            type="button"
-                            className={styles.dangerButton}
-                            onClick={() => handleRemoveLesson(item.videoId)}
-                            disabled={removingVideoId === item.videoId}
-                          >
-                            {removingVideoId === item.videoId ? 'Removing...' : 'Remove'}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
+                    <LessonCard
+                      key={lesson.id}
+                      lesson={lesson}
+                      index={index}
+                      progress={progress}
+                      to={`/watch/${lesson.id}?playlist=${playlist.id}`}
+                      onRemove={() => handleRemoveLesson(item.videoId)}
+                      removing={removingVideoId === item.videoId}
+                    />
                   ))}
                 </div>
               ) : (

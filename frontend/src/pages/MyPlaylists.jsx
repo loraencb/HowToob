@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LoadingSpinner from '../components/common/LoadingSpinner'
+import PlaylistCard from '../components/common/PlaylistCard'
 import { useAuth } from '../context/AuthContext'
 import { useProgress } from '../context/ProgressContext'
 import { usePlaylists } from '../context/PlaylistContext'
 import { videosAPI } from '../utils/api'
-import { formatRelativeTime, truncate } from '../utils/formatters'
+import { truncate } from '../utils/formatters'
 import styles from './MyPlaylists.module.css'
 
 function normalizeFeedResponse(data) {
@@ -278,55 +279,12 @@ export default function MyPlaylists() {
         {!playlistsLoading && hasMeaningfulPlaylists ? (
           <div className={styles.playlistGrid}>
             {playlistCards.map((playlist) => (
-              <article key={playlist.id} className={styles.playlistCard}>
-                <div className={styles.cardHeader}>
-                  <div>
-                    <div className={styles.cardTopRow}>
-                      <h3 className={styles.cardTitle}>{playlist.title}</h3>
-                      {playlist.isDefault ? (
-                        <span className={styles.defaultBadge}>Default</span>
-                      ) : null}
-                    </div>
-                    <p className={styles.cardDescription}>
-                      {playlist.description ||
-                        'A structured path you can keep refining over time.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className={styles.statRow}>
-                  <div className={styles.statBlock}>
-                    <span className={styles.statLabel}>Lessons</span>
-                    <strong className={styles.statValue}>{playlist.lessonCount}</strong>
-                  </div>
-                  <div className={styles.statBlock}>
-                    <span className={styles.statLabel}>Completed</span>
-                    <strong className={styles.statValue}>
-                      {playlist.progress.completed}/{playlist.progress.total}
-                    </strong>
-                  </div>
-                  <div className={styles.statBlock}>
-                    <span className={styles.statLabel}>Progress</span>
-                    <strong className={styles.statValue}>{playlist.progress.percent}%</strong>
-                  </div>
-                </div>
-
-                <div className={styles.progressTrack} aria-hidden="true">
-                  <span
-                    className={styles.progressFill}
-                    style={{ width: `${playlist.progress.percent}%` }}
-                  />
-                </div>
-
-                <div className={styles.cardFooter}>
-                  <span className={styles.updatedText}>
-                    Updated {formatRelativeTime(playlist.updatedAt)}
-                  </span>
-                  <Link to={`/playlist/${playlist.id}`} className={styles.secondaryButton}>
-                    Open path
-                  </Link>
-                </div>
-              </article>
+              <PlaylistCard
+                key={playlist.id}
+                playlist={playlist}
+                progress={playlist.progress}
+                to={`/playlist/${playlist.id}`}
+              />
             ))}
           </div>
         ) : !playlistsLoading ? (

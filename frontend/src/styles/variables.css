@@ -1,81 +1,84 @@
 :root {
-  /* ═══ COLORS ═══ */
-
-  /* Primary Brand */
-  --color-primary: #4f8cff;
-  --color-primary-hover: #3d79ea;
-  --color-primary-light: #8ec5ff;
-  --color-primary-rgb: 79, 140, 255;
-  --color-accent: #67d4ff;
-  --color-accent-rgb: 103, 212, 255;
+  /* Colors */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1e40af;
+  --color-primary-light: #60a5fa;
+  --color-primary-rgb: 37, 99, 235;
+  --color-secondary: #1e40af;
+  --color-secondary-rgb: 30, 64, 175;
+  --color-accent: #38bdf8;
+  --color-accent-rgb: 56, 189, 248;
 
   /* Backgrounds */
-  --color-bg-dark: #081423;
-  --color-bg-secondary: #0f1e33;
-  --color-bg-elevated: #162944;
-  --color-bg-surface: #1d3453;
-  --color-bg-overlay: rgba(8, 20, 35, 0.78);
+  --color-bg-dark: #0f172a;
+  --color-bg-secondary: #111c33;
+  --color-bg-elevated: #1e293b;
+  --color-bg-surface: #24344d;
+  --color-card: #1e293b;
+  --color-bg-overlay: rgba(15, 23, 42, 0.78);
 
   /* Text */
-  --color-text-light: #eef5ff;
-  --color-text-muted: #9db1ca;
-  --color-text-dark: #10213a;
+  --color-text-light: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-text-dark: #0f172a;
 
-  /* Borders */
-  --color-border: rgba(137, 170, 214, 0.18);
-  --color-border-strong: rgba(137, 170, 214, 0.34);
-  --color-border-focus: #8ec5ff;
-  --color-surface-tint: rgba(79, 140, 255, 0.08);
-  --color-surface-tint-strong: rgba(79, 140, 255, 0.14);
-  --color-surface-highlight: rgba(103, 212, 255, 0.1);
+  /* Borders and surface tints */
+  --color-border: rgba(148, 163, 184, 0.18);
+  --color-border-strong: rgba(148, 163, 184, 0.34);
+  --color-border-focus: #38bdf8;
+  --color-surface-tint: rgba(37, 99, 235, 0.08);
+  --color-surface-tint-strong: rgba(37, 99, 235, 0.16);
+  --color-surface-highlight: rgba(56, 189, 248, 0.12);
 
-  /* Status Colors */
+  /* Status colors */
   --color-success: #34d399;
   --color-warning: #fbbf24;
   --color-error: #fb7185;
-  --color-info: #67d4ff;
+  --color-info: #38bdf8;
 
-  /* Progress & Quiz */
-  --color-progress-bg: rgba(157, 177, 202, 0.18);
-  --color-progress-fill: #67d4ff;
+  /* Progress and quiz */
+  --color-progress-bg: rgba(148, 163, 184, 0.18);
+  --color-progress-fill: #38bdf8;
   --color-quiz-correct: #34d399;
   --color-quiz-incorrect: #fb7185;
 
-  /* Subscription Tiers */
-  --color-tier-free: #a7b7cc;
-  --color-tier-mid: #67d4ff;
+  /* Subscription tiers */
+  --color-tier-free: #cbd5e1;
+  --color-tier-mid: #38bdf8;
   --color-tier-premium: #f6c86e;
+
+  /* Gradients */
   --gradient-page:
-    radial-gradient(circle at top, rgba(79, 140, 255, 0.16), transparent 36%),
-    radial-gradient(circle at 85% 12%, rgba(103, 212, 255, 0.1), transparent 28%);
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 34%),
+    radial-gradient(circle at 86% 10%, rgba(56, 189, 248, 0.12), transparent 30%);
   --gradient-panel:
-    radial-gradient(circle at top right, rgba(79, 140, 255, 0.2), transparent 34%),
-    linear-gradient(135deg, rgba(79, 140, 255, 0.12), rgba(22, 41, 68, 0.96));
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 34%),
+    linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(30, 41, 59, 0.96));
   --gradient-primary: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
   --gradient-primary-soft: linear-gradient(90deg, var(--color-primary), var(--color-accent));
 
-  /* ═══ SPACING ═══ */
-  --space-xs: 0.25rem;   /* 4px */
-  --space-sm: 0.5rem;    /* 8px */
-  --space-md: 1rem;      /* 16px */
-  --space-lg: 1.5rem;    /* 24px */
-  --space-xl: 2rem;      /* 32px */
-  --space-2xl: 3rem;     /* 48px */
-  --space-3xl: 4rem;     /* 64px */
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
 
-  /* ═══ TYPOGRAPHY ═══ */
+  /* Typography */
   --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-heading: 'Poppins', 'Inter', sans-serif;
   --font-family-mono: 'Fira Code', 'Courier New', monospace;
 
-  --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.875rem;   /* 14px */
-  --font-size-base: 1rem;     /* 16px */
-  --font-size-lg: 1.125rem;   /* 18px */
-  --font-size-xl: 1.25rem;    /* 20px */
-  --font-size-2xl: 1.5rem;    /* 24px */
-  --font-size-3xl: 2rem;      /* 32px */
-  --font-size-4xl: 2.5rem;    /* 40px */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -86,26 +89,26 @@
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.75;
 
-  /* ═══ BORDER RADIUS ═══ */
+  /* Shape */
   --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 22px;
   --radius-full: 9999px;
 
-  /* ═══ SHADOWS ═══ */
-  --shadow-sm: 0 8px 18px rgba(3, 11, 24, 0.2);
-  --shadow-md: 0 14px 28px rgba(3, 11, 24, 0.28);
-  --shadow-lg: 0 18px 40px rgba(3, 11, 24, 0.34);
-  --shadow-xl: 0 26px 60px rgba(3, 11, 24, 0.42);
-  --shadow-focus: 0 0 0 3px rgba(79, 140, 255, 0.24);
+  /* Shadows */
+  --shadow-sm: 0 8px 18px rgba(2, 6, 23, 0.2);
+  --shadow-md: 0 14px 28px rgba(2, 6, 23, 0.28);
+  --shadow-lg: 0 18px 40px rgba(2, 6, 23, 0.34);
+  --shadow-xl: 0 26px 60px rgba(2, 6, 23, 0.42);
+  --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.28);
 
-  /* ═══ TRANSITIONS ═══ */
+  /* Transitions */
   --transition-fast: 180ms ease;
   --transition-normal: 260ms ease;
   --transition-slow: 420ms ease;
 
-  /* ═══ Z-INDEX LAYERS ═══ */
+  /* Z-index layers */
   --z-base: 1;
   --z-dropdown: 100;
   --z-sticky: 200;
@@ -114,11 +117,8 @@
   --z-modal: 500;
   --z-popover: 600;
   --z-tooltip: 700;
-  /* ═══ LAYOUT ═══ */
-  --navbar-height: 64px;
-  --sidebar-width: 280px;
-  --sidebar-width-collapsed: 80px;
-  /* ═══ LAYOUT ═══ */
+
+  /* Layout */
   --navbar-height: 64px;
   --sidebar-width: 240px;
   --sidebar-width-collapsed: 64px;

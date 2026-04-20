@@ -74,7 +74,7 @@ export default function Navbar({ onToggleSidebar, isOpen }) {
           <input
             type="search"
             className={styles.searchInput}
-            placeholder="Search tutorials, topics, creators…"
+            placeholder="Search lessons, topics, creators..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             aria-label="Search"

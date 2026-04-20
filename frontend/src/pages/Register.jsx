@@ -168,7 +168,7 @@ export default function Register() {
                 </span>
                 <div>
                   <span className={styles.roleTitle}>Learn</span>
-                  <span className={styles.roleDesc}>Watch tutorials, track progress</span>
+                  <span className={styles.roleDesc}>Watch lessons, track progress</span>
                 </div>
               </label>
 
@@ -196,7 +196,7 @@ export default function Register() {
                 </span>
                 <div>
                   <span className={styles.roleTitle}>Create</span>
-                  <span className={styles.roleDesc}>Upload tutorials, build courses</span>
+                  <span className={styles.roleDesc}>Upload lessons, build courses</span>
                 </div>
               </label>
             </div>

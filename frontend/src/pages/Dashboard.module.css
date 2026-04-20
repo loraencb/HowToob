@@ -278,9 +278,8 @@
 }
 
 .progressRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
+  display: grid;
+  gap: var(--space-sm);
 }
 
 .progressTrack {

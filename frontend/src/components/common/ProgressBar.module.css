@@ -1,0 +1,65 @@
+.wrapper {
+  width: 100%;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.label,
+.value {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.label {
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.value {
+  color: var(--color-text-light);
+}
+
+.track {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-progress-bg);
+  box-shadow: inset 0 1px 2px rgba(2, 6, 23, 0.28);
+}
+
+.sm {
+  height: 6px;
+}
+
+.md {
+  height: 10px;
+}
+
+.lg {
+  height: 14px;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: var(--gradient-primary-soft);
+  transition: width var(--transition-normal);
+}
+
+.success .fill {
+  background: linear-gradient(90deg, var(--color-success), var(--color-accent));
+}
+
+.muted .fill {
+  background: linear-gradient(90deg, var(--color-text-muted), var(--color-bg-surface));
+}
