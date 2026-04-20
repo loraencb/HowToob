@@ -54,7 +54,11 @@ services:
         scope: RUN_TIME
         type: GENERAL
       - key: FILE_STORAGE_BACKEND
-        value: "local"
+        value: "spaces"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPACES_BUCKET
+        value: "howtoob-media"
         scope: RUN_TIME
         type: GENERAL
       - key: SPACES_REGION
@@ -73,6 +77,14 @@ services:
         value: "900"
         scope: RUN_TIME
         type: GENERAL
+      - key: SPACES_ACCESS_KEY_ID
+        value: "replace-this-in-digitalocean"
+        scope: RUN_TIME
+        type: SECRET
+      - key: SPACES_SECRET_ACCESS_KEY
+        value: "replace-this-in-digitalocean"
+        scope: RUN_TIME
+        type: SECRET
       - key: SESSION_COOKIE_SECURE
         value: "true"
         scope: RUN_TIME
