@@ -1,9 +1,13 @@
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+# Real environment variables from DigitalOcean, shells, or CI must win over
+# local .env files. This keeps local dev convenient without letting a checked-out
+# .env accidentally force SQLite in deployed environments.
+load_dotenv(override=False)
 
 
 def parse_bool(value, default=False):
@@ -51,6 +55,26 @@ def build_database_uri():
         return normalize_database_url(database_url), "env"
 
     return "sqlite:///app.db", "fallback"
+
+
+def describe_database_uri(database_uri):
+    normalized = str(database_uri or "").strip()
+    parsed = urlsplit(normalized)
+    scheme = parsed.scheme or "unknown"
+
+    if scheme.startswith("sqlite"):
+        database_name = Path(parsed.path or "").name or "local-file"
+        return {
+            "scheme": scheme,
+            "host": "local",
+            "database": database_name,
+        }
+
+    return {
+        "scheme": scheme,
+        "host": parsed.hostname or "unknown",
+        "database": Path(parsed.path or "").name or "unknown",
+    }
 
 
 def build_cors_allowed_origins():

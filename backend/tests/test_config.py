@@ -2,7 +2,7 @@ from flask import Flask
 import pytest
 
 from backend.src.app import validate_database_config
-from backend.src.app.config import normalize_database_url
+from backend.src.app.config import describe_database_uri, normalize_database_url
 
 
 def make_configured_app(database_uri, require_database_url=True, uri_source="env", testing=False):
@@ -20,6 +20,16 @@ def test_normalize_database_url_accepts_digitalocean_postgres_scheme():
     assert normalize_database_url("postgres://user:pass@example.com/db") == (
         "postgresql://user:pass@example.com/db"
     )
+
+
+def test_describe_database_uri_hides_password():
+    summary = describe_database_uri("postgresql://db:secret@example.com:25060/db?sslmode=require")
+
+    assert summary == {
+        "scheme": "postgresql",
+        "host": "example.com",
+        "database": "db",
+    }
 
 
 def test_production_database_config_rejects_sqlite_fallback():

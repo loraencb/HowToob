@@ -4,7 +4,7 @@ import time
 from flask import Flask, jsonify, request, send_from_directory
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
-from .config import Config, normalize_origin
+from .config import Config, describe_database_uri, normalize_origin
 from .extensions import db, login_manager, migrate
 
 SCHEMA_PATCHES = {
@@ -106,6 +106,19 @@ def validate_database_config(app):
         )
 
 
+def log_database_config(app):
+    database_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+    summary = describe_database_uri(database_uri)
+    app.logger.warning(
+        "HowToob database config: source=%s require_database_url=%s scheme=%s host=%s database=%s",
+        app.config.get("SQLALCHEMY_DATABASE_URI_SOURCE"),
+        bool(app.config.get("REQUIRE_DATABASE_URL")),
+        summary["scheme"],
+        summary["host"],
+        summary["database"],
+    )
+
+
 def initialize_database(app):
     attempts = max(1, int(app.config.get("DB_STARTUP_RETRIES", 5) or 5))
     retry_seconds = max(1, int(app.config.get("DB_STARTUP_RETRY_SECONDS", 2) or 2))
@@ -138,6 +151,7 @@ def create_app(config_overrides=None):
         app.config.update(config_overrides)
 
     validate_database_config(app)
+    log_database_config(app)
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
