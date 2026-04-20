@@ -217,3 +217,19 @@ def test_generate_ai_quiz_reports_missing_backend_configuration(auth_client):
     })
     assert generated.status_code == 503
     assert "OPENAI_API_KEY" in generated.get_json()["error"]
+
+
+def test_generate_ai_quiz_reports_placeholder_backend_configuration(auth_client):
+    auth_client.application.config["OPENAI_API_KEY"] = "replace-this-in-digitalocean"
+    create_video = auth_client.post("/videos/", json={
+        "title": "Placeholder Key Quiz Lesson",
+        "description": "Placeholder API key should fail before media lookup",
+        "file_path": "/videos/placeholder-key-ai-quiz.mp4",
+    })
+    video_id = create_video.get_json()["id"]
+
+    generated = auth_client.post(f"/videos/{video_id}/quiz/generate", json={
+        "question_count": 10,
+    })
+    assert generated.status_code == 503
+    assert "placeholder OPENAI_API_KEY" in generated.get_json()["error"]

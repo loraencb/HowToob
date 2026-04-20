@@ -461,6 +461,36 @@ def test_upload_video_can_auto_generate_ai_quiz(auth_client, monkeypatch):
     assert calls["overwrite"] is False
 
 
+def test_upload_video_skips_auto_quiz_when_openai_key_is_placeholder(auth_client, monkeypatch):
+    auth_client.application.config["QUIZ_AI_AUTO_GENERATE_ON_UPLOAD"] = True
+    auth_client.application.config["OPENAI_API_KEY"] = "replace-this-in-digitalocean"
+
+    def fake_generate_ai_quiz(actor_id, video_id, question_count=None, overwrite=False):
+        assert False, "Placeholder OpenAI keys should skip generation before service call"
+
+    monkeypatch.setattr(
+        "backend.src.app.routes.video.routes.QuizService.generate_ai_quiz",
+        fake_generate_ai_quiz,
+    )
+
+    video_data = io.BytesIO(b"placeholder key upload content")
+    response = auth_client.post(
+        "/videos/upload",
+        data={
+            "title": "Upload With Placeholder AI Key",
+            "description": "Upload should not call OpenAI with a placeholder",
+            "video": (video_data, "placeholder-key-upload.mp4"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload["quiz_generation"]["attempted"] is False
+    assert payload["quiz_generation"]["status"] == "skipped"
+    assert "placeholder" in payload["quiz_generation"]["message"]
+
+
 def test_upload_video_still_succeeds_when_auto_quiz_generation_fails(auth_client, monkeypatch):
     auth_client.application.config["QUIZ_AI_AUTO_GENERATE_ON_UPLOAD"] = True
     auth_client.application.config["OPENAI_API_KEY"] = "test-key"

@@ -176,6 +176,20 @@ Upload behavior:
 
 Deleting or editing a generated quiz is still handled through the existing quiz-definition path.
 
+### AI quiz troubleshooting on DigitalOcean
+
+- `OPENAI_API_KEY` must be a real secret value in the DigitalOcean web service. Leaving
+  the app spec placeholder (`replace-this-in-digitalocean`) in place is detected and
+  reported as a configuration error.
+- If the OpenAI project has no available quota or billing, the generator returns a
+  quota/billing error from the backend instead of silently falling back.
+- Uploaded media is still stored on the container filesystem in this MVP. If a lesson
+  was uploaded before a DigitalOcean redeploy or restart, the database row may remain
+  while the actual video file is gone. Re-upload the lesson, or move uploads to durable
+  storage such as DigitalOcean Spaces before relying on generation for older lessons.
+- For the most reliable demo flow, upload a fresh lesson after the app is deployed and
+  confirm the upload response shows `quiz_generation.status` as `generated`.
+
 ## DigitalOcean App Platform Deployment
 
 The simplest App Platform deployment for this repo is a single Docker web service. The

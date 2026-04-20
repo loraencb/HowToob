@@ -10,10 +10,37 @@ from backend.src.app.services.quiz.ai_generation import (
     OpenAIQuizGenerator,
     QuizGenerationError,
     TRANSCRIPTION_FILE_LIMIT_BYTES,
+    is_placeholder_openai_api_key,
 )
 
 
 TEST_VIDEO_DIR = Path("uploads/videos")
+
+
+def test_openai_key_placeholder_detection():
+    assert is_placeholder_openai_api_key("replace-this-in-digitalocean")
+    assert is_placeholder_openai_api_key("your-openai-api-key")
+    assert is_placeholder_openai_api_key("${OPENAI_API_KEY}")
+    assert not is_placeholder_openai_api_key("")
+    assert not is_placeholder_openai_api_key("sk-test-real-looking-key")
+
+
+def test_generate_quiz_definition_rejects_placeholder_api_key(app):
+    with app.app_context():
+        app.config["OPENAI_API_KEY"] = "replace-this-in-digitalocean"
+        video = Video(
+            title="Placeholder Key Lesson",
+            description="The key should fail before file access.",
+            file_path="/missing/lesson.mp4",
+            creator_id=1,
+        )
+
+        try:
+            OpenAIQuizGenerator.generate_quiz_definition(video, question_count=10, config=app.config)
+            assert False, "Expected QuizGenerationError for placeholder OPENAI_API_KEY"
+        except QuizGenerationError as exc:
+            assert exc.status_code == 503
+            assert "placeholder OPENAI_API_KEY" in str(exc)
 
 
 def test_generate_quiz_definition_reuses_cached_transcript(app, monkeypatch):

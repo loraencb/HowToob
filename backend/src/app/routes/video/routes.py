@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from ...utils.file_handler import save_file, allowed_file, ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
 from ...services.progress import ProgressService
 from ...services.quiz import QuizService
+from ...services.quiz.ai_generation import is_placeholder_openai_api_key
 from ...services.social import SocialService
 from ...services.video import VideoService
 
@@ -23,6 +24,15 @@ def _build_upload_quiz_generation_payload(video):
             "attempted": False,
             "status": "skipped",
             "message": "Automatic AI quiz generation is enabled, but OPENAI_API_KEY is not configured.",
+        }
+    if is_placeholder_openai_api_key(api_key):
+        return {
+            "attempted": False,
+            "status": "skipped",
+            "message": (
+                "Automatic AI quiz generation is enabled, but OPENAI_API_KEY is still set to a placeholder. "
+                "Set the real key as a DigitalOcean secret and redeploy."
+            ),
         }
 
     payload, error, status = QuizService.generate_ai_quiz(

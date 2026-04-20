@@ -19,6 +19,28 @@ from ...utils.category_taxonomy import get_category_metadata
 
 TRANSCRIPTION_FILE_LIMIT_BYTES = 25 * 1024 * 1024
 INSUFFICIENT_TRANSCRIPT_PREFIX = "insufficient_transcript:"
+OPENAI_API_KEY_PLACEHOLDERS = {
+    "replace-this-in-digitalocean",
+    "replace-me",
+    "your-openai-api-key",
+    "your_openai_api_key",
+    "set-in-digitalocean",
+    "__set_in_digitalocean__",
+}
+
+
+def is_placeholder_openai_api_key(api_key):
+    normalized = str(api_key or "").strip().lower()
+    if not normalized:
+        return False
+
+    return (
+        normalized in OPENAI_API_KEY_PLACEHOLDERS
+        or normalized.startswith("replace-")
+        or normalized.startswith("your-")
+        or normalized.startswith("${")
+        or normalized.startswith("<")
+    )
 
 
 class QuizGenerationError(Exception):
@@ -48,6 +70,12 @@ class OpenAIQuizGenerator:
                 "AI quiz generation is not configured on the backend. Set OPENAI_API_KEY first.",
                 status_code=503,
             )
+        if is_placeholder_openai_api_key(api_key):
+            raise QuizGenerationError(
+                "AI quiz generation is configured with a placeholder OPENAI_API_KEY. "
+                "Set the real OpenAI API key as a secret in DigitalOcean and redeploy.",
+                status_code=503,
+            )
 
         requested_question_count = question_count
         if requested_question_count is None:
@@ -64,7 +92,9 @@ class OpenAIQuizGenerator:
         lesson_file = Path(str(video.file_path or "")).expanduser()
         if not lesson_file.exists() or not lesson_file.is_file():
             raise QuizGenerationError(
-                "The uploaded lesson file could not be found on disk for AI quiz generation.",
+                "The uploaded lesson file is not available on this server, so AI quiz generation cannot read it. "
+                "If this happened after a DigitalOcean redeploy or restart, re-upload the lesson or move uploads "
+                "to durable storage such as DigitalOcean Spaces.",
                 status_code=400,
             )
 
