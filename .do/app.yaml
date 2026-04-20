@@ -8,6 +8,7 @@ services:
       branch: vinny-frontend-ui
       deploy_on_push: true
     dockerfile_path: Dockerfile
+    source_dir: /
     http_port: 8080
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-1gb
