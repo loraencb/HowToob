@@ -520,6 +520,90 @@
   flex-wrap: wrap;
 }
 
+.ratingPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.22);
+  background:
+    linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.12), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.02);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.ratingSummary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.ratingAverage {
+  color: var(--color-text-light);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ratingCount,
+.ratingHelper {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.ratingHelper {
+  margin: 0;
+}
+
+.starRatingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.starRatingButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 38px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.starRatingButton:hover {
+  color: var(--color-text-light);
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  transform: translateY(-1px);
+}
+
+.starRatingButton:disabled {
+  cursor: wait;
+  opacity: 0.75;
+  transform: none;
+}
+
+.starRatingButtonActive {
+  color: var(--color-primary-light);
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  background: rgba(var(--color-primary-rgb), 0.18);
+}
+
+.starRatingButton:focus-visible {
+  outline: 2px solid rgba(var(--color-primary-rgb), 0.7);
+  outline-offset: 2px;
+}
+
 .actionChip {
   display: inline-flex;
   align-items: center;
@@ -1076,6 +1160,7 @@
   flex-wrap: wrap;
 }
 
+.commentLikeButton,
 .replyButton {
   padding: 0;
   border: none;
@@ -1084,10 +1169,32 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
+.commentLikeButton:hover,
 .replyButton:hover {
   color: var(--color-primary-light);
+}
+
+.commentLikeButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.commentLikeButtonActive {
+  color: var(--color-primary-light);
+}
+
+.commentLikeCount {
+  min-width: 1.4rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-full);
+  background: rgba(var(--color-primary-rgb), 0.14);
+  color: var(--color-text-light);
+  text-align: center;
 }
 
 .reportCommentButton {
@@ -1254,6 +1361,7 @@
 .secondaryActionChip:focus-visible,
 .noticeLink:focus-visible,
 .quizButton:focus-visible,
+.commentLikeButton:focus-visible,
 .replyButton:focus-visible,
 .reportCommentButton:focus-visible,
 .commentSubmitButton:focus-visible,

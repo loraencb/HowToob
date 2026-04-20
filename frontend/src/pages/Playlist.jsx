@@ -7,6 +7,7 @@ import { usePlaylists } from '../context/PlaylistContext'
 import { videosAPI } from '../utils/api'
 import {
   formatNumericDate,
+  formatRatingSummary,
   formatRelativeTime,
   formatViewCount,
   truncate,
@@ -24,6 +25,9 @@ function normalizeVideoResponse(data) {
     description: raw.description || '',
     thumbnail_url: raw.thumbnail_url || raw.thumbnail || '',
     views: raw.views || 0,
+    like_count: raw.like_count || 0,
+    rating_count: raw.rating_count ?? raw.like_count ?? 0,
+    average_rating: raw.average_rating ?? 0,
     created_at: raw.created_at || null,
     creator_id: raw.creator_id ?? null,
     author_name:
@@ -256,9 +260,7 @@ export default function Playlist() {
           <h1 className={styles.title}>{playlist.title}</h1>
           <p className={styles.subtitle}>
             {playlist.description ||
-              (playlistsSource === 'backend'
-                ? 'A backend learning path that keeps lessons in sequence for structured study.'
-                : 'A local fallback learning path that keeps lessons in sequence in this browser.')}
+              'A structured learning path that keeps lessons in sequence for focused study.'}
           </p>
         </div>
 
@@ -292,9 +294,7 @@ export default function Playlist() {
               <span className={styles.summaryLabel}>Lessons</span>
               <strong className={styles.summaryValue}>{orderedLessons.length}</strong>
               <span className={styles.summaryText}>
-                {playlistsSource === 'backend'
-                  ? 'Ordered in your backend learning path.'
-                  : 'Ordered in the local fallback path saved in this browser.'}
+                Keeps your lessons in the order you planned them.
               </span>
             </article>
 
@@ -359,7 +359,7 @@ export default function Playlist() {
                               {truncate(lesson.title, 80)}
                             </Link>
                             <p className={styles.lessonMeta}>
-                              {lesson.author_name} - {formatViewCount(lesson.views || 0)} views
+                              {lesson.author_name} - {formatViewCount(lesson.views || 0)} views - {formatRatingSummary(lesson.average_rating, lesson.rating_count)}
                               {lesson.created_at ? ` - ${formatNumericDate(lesson.created_at)}` : ''}
                             </p>
                           </div>
@@ -418,32 +418,32 @@ export default function Playlist() {
 
             <aside className={styles.sideColumn}>
               <article className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <div>
-                    <p className={styles.panelEyebrow}>Playback behavior</p>
-                    <h2 className={styles.panelTitle}>What is backend-driven?</h2>
-                  </div>
+              <div className={styles.panelHeader}>
+                <div>
+                  <p className={styles.panelEyebrow}>Playback behavior</p>
+                    <h2 className={styles.panelTitle}>How this path works</h2>
                 </div>
+              </div>
 
-                <div className={styles.infoList}>
-                  <div className={styles.infoItem}>
-                    <strong className={styles.infoLabel}>Backend lessons</strong>
+              <div className={styles.infoList}>
+                <div className={styles.infoItem}>
+                    <strong className={styles.infoLabel}>Lesson details</strong>
                     <p className={styles.infoText}>
-                      Video metadata and playback come from the existing video endpoints.
+                      Lesson details and playback stay linked to the original published lesson.
                     </p>
                   </div>
                   <div className={styles.infoItem}>
-                    <strong className={styles.infoLabel}>Learning-path storage</strong>
+                    <strong className={styles.infoLabel}>Lesson order</strong>
                     <p className={styles.infoText}>
                       {playlistsSource === 'backend'
-                        ? 'Playlist membership, course order, and sequential playback now come from the backend playlist system.'
-                        : 'Playlist membership and order are using local fallback data because backend playlist loading is unavailable.'}
+                        ? 'Membership, order, and sequential playback are all staying in sync with this learning path.'
+                        : 'This learning path is still available here and keeps your lesson order intact on this device.'}
                     </p>
                   </div>
                   <div className={styles.infoItem}>
-                    <strong className={styles.infoLabel}>Progress state</strong>
+                    <strong className={styles.infoLabel}>Progress</strong>
                     <p className={styles.infoText}>
-                      Completion state prefers backend watch progress and falls back locally only when sync is unavailable.
+                      Completion updates automatically as you move through the lessons.
                     </p>
                   </div>
                 </div>

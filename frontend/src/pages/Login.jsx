@@ -56,7 +56,7 @@ export default function Login() {
     } catch (err) {
       if (err?.code === 'NETWORK_ERROR') {
         setServerError(
-          'Could not reach the HowToob backend from this device. Check that the host PC is on, both devices are on the same Wi-Fi, and the frontend is using the correct LAN IP.'
+          'Could not reach HowToob from this device. Check that the host machine is on and the connection address is correct.'
         )
       } else if (err?.status === 401) {
         setServerError('Login failed. Please check your email and password.')

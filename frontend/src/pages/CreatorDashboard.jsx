@@ -4,8 +4,14 @@ import ErrorMessage from '../components/common/ErrorMessage'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import Modal from '../components/common/Modal'
 import { useAuth } from '../context/AuthContext'
-import { videosAPI } from '../utils/api'
+import { quizAPI, videosAPI } from '../utils/api'
 import { formatNumericDate, formatViewCount, truncate } from '../utils/formatters'
+import {
+  PRIMARY_CATEGORIES,
+  SUB_CATEGORIES,
+  getCategoryMetadata,
+  getPrimaryCategory,
+} from '../utils/categoryTaxonomy'
 
 function normalizeCreatorVideos(data) {
   if (Array.isArray(data)) return data
@@ -20,9 +26,15 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ title: '', description: '' })
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    primaryCategory: '',
+    category: '',
+  })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [generatingQuizId, setGeneratingQuizId] = useState(null)
   const [pendingDeleteVideo, setPendingDeleteVideo] = useState(null)
   const [actionMessage, setActionMessage] = useState('')
   const [actionError, setActionError] = useState('')
@@ -53,8 +65,8 @@ export default function CreatorDashboard() {
     [videos]
   )
 
-  const totalLikes = useMemo(
-    () => videos.reduce((sum, video) => sum + (video.like_count || 0), 0),
+  const totalRatings = useMemo(
+    () => videos.reduce((sum, video) => sum + (video.rating_count ?? video.like_count ?? 0), 0),
     [videos]
   )
 
@@ -66,7 +78,7 @@ export default function CreatorDashboard() {
   const statCards = [
     { label: 'Published lessons', value: videos.length, helper: 'Videos currently live on HowToob' },
     { label: 'Total views', value: formatViewCount(totalViews), helper: 'Combined views across your uploads' },
-    { label: 'Engagement', value: totalLikes + totalComments, helper: 'Likes plus comments captured so far' },
+    { label: 'Engagement', value: totalRatings + totalComments, helper: 'Ratings plus comments captured so far' },
   ]
 
   const topViewedVideo = useMemo(
@@ -81,8 +93,8 @@ export default function CreatorDashboard() {
   const topEngagedVideo = useMemo(
     () =>
       videos.reduce((top, video) => {
-        const score = (video.like_count || 0) + (video.comment_count || 0)
-        const topScore = (top?.like_count || 0) + (top?.comment_count || 0)
+        const score = (video.rating_count ?? video.like_count ?? 0) + (video.comment_count || 0)
+        const topScore = (top?.rating_count ?? top?.like_count ?? 0) + (top?.comment_count || 0)
         return score > topScore ? video : top
       }, null),
     [videos]
@@ -100,9 +112,15 @@ export default function CreatorDashboard() {
 
   function handleStartEdit(video) {
     setEditingId(video.id)
+    const categoryMetadata = getCategoryMetadata(video.category)
+    const primaryCategory = getPrimaryCategory(video.category)?.value || categoryMetadata.primaryValue || ''
     setEditForm({
       title: video.title || '',
       description: video.description || '',
+      primaryCategory,
+      category: categoryMetadata.primaryValue && categoryMetadata.value !== categoryMetadata.primaryValue
+        ? categoryMetadata.value
+        : '',
     })
     setActionMessage('')
     setActionError('')
@@ -110,7 +128,7 @@ export default function CreatorDashboard() {
 
   function handleCancelEdit() {
     setEditingId(null)
-    setEditForm({ title: '', description: '' })
+    setEditForm({ title: '', description: '', primaryCategory: '', category: '' })
   }
 
   function handleRequestDelete(video) {
@@ -140,6 +158,7 @@ export default function CreatorDashboard() {
       const updated = await videosAPI.update(videoId, {
         title,
         description: editForm.description.trim(),
+        category: editForm.category || editForm.primaryCategory || '',
       })
 
       setVideos((prev) =>
@@ -171,6 +190,26 @@ export default function CreatorDashboard() {
       setActionError(requestError.message || 'Could not delete this lesson.')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function handleGenerateQuiz(videoId) {
+    setGeneratingQuizId(videoId)
+    setActionError('')
+    setActionMessage('')
+
+    try {
+      const payload = await quizAPI.generate(videoId, { questionCount: 10, overwrite: false })
+      const questionCount = payload?.quiz?.question_count || 0
+      setActionMessage(
+        questionCount > 0
+          ? `AI quiz generated with ${questionCount} questions for this lesson.`
+          : 'AI quiz is ready for this lesson.'
+      )
+    } catch (requestError) {
+      setActionError(requestError.message || 'Could not generate an AI quiz for this lesson.')
+    } finally {
+      setGeneratingQuizId(null)
     }
   }
 
@@ -305,7 +344,7 @@ export default function CreatorDashboard() {
                   label: 'Most engaged',
                   title: topEngagedVideo?.title || 'No lessons yet',
                   helper: topEngagedVideo
-                    ? `${(topEngagedVideo.like_count || 0) + (topEngagedVideo.comment_count || 0)} combined likes and comments`
+                    ? `${(topEngagedVideo.rating_count ?? topEngagedVideo.like_count ?? 0) + (topEngagedVideo.comment_count || 0)} combined ratings and comments`
                     : 'Engagement appears when learners react or comment',
                 },
                 {
@@ -395,6 +434,9 @@ export default function CreatorDashboard() {
                         </div>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
                           Published {formatNumericDate(video.created_at)}
+                          {getCategoryMetadata(video.category).pathLabel
+                            ? ` | ${getCategoryMetadata(video.category).pathLabel}`
+                            : ''}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', minWidth: '120px' }}>
@@ -402,7 +444,7 @@ export default function CreatorDashboard() {
                           {formatViewCount(video.views || 0)} views
                         </div>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                          {video.like_count || 0} likes | {video.comment_count || 0} comments
+                          {video.rating_count ?? video.like_count ?? 0} ratings | {video.comment_count || 0} comments
                         </div>
                       </div>
                     </Link>
@@ -441,7 +483,7 @@ export default function CreatorDashboard() {
                   Studio notes
                 </h2>
                 <p style={{ margin: 'var(--space-sm) 0 0', color: 'var(--color-text-muted)', lineHeight: 'var(--line-height-relaxed)' }}>
-                  Insights here come from the real lesson records you already have, without pretending the backend exposes a full analytics suite yet.
+                  Use these lesson insights to spot what is resonating and decide what to improve next.
                 </p>
               </div>
 
@@ -458,9 +500,7 @@ export default function CreatorDashboard() {
                   Use lightweight insights to decide what to improve next
                 </div>
                 <p style={{ margin: 0, color: 'var(--color-text-muted)', lineHeight: 'var(--line-height-relaxed)' }}>
-                  The current backend already gives you live counts for views, likes,
-                  and comments, so this page focuses on actionable upload feedback
-                  and lesson management instead of fake charts.
+                  Track views, ratings, and comments here, then use that feedback to refine your next lesson.
                 </p>
               </div>
 
@@ -510,7 +550,7 @@ export default function CreatorDashboard() {
                   Edit or remove published lessons
                 </h2>
                 <p style={{ margin: 'var(--space-sm) 0 0', color: 'var(--color-text-muted)', lineHeight: 'var(--line-height-relaxed)' }}>
-                  These actions use the real update and delete endpoints, so the studio stays honest about what is actually supported.
+                  Keep your lesson details current and remove older uploads when you are ready.
                 </p>
               </div>
 
@@ -547,7 +587,7 @@ export default function CreatorDashboard() {
                           {formatViewCount(video.views || 0)} views
                         </div>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                          {video.like_count || 0} likes | {video.comment_count || 0} comments
+                          {video.rating_count ?? video.like_count ?? 0} ratings | {video.comment_count || 0} comments
                         </div>
                       </div>
                     </div>
@@ -556,7 +596,32 @@ export default function CreatorDashboard() {
                       {video.description || 'No lesson description added yet.'}
                     </p>
 
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                      {getCategoryMetadata(video.category).pathLabel || 'No category tag selected yet.'}
+                    </div>
+
                     <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateQuiz(video.id)}
+                        disabled={generatingQuizId === video.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: '42px',
+                          padding: '0.75rem 1rem',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid rgba(var(--color-primary-rgb), 0.28)',
+                          color: 'var(--color-text-light)',
+                          background: 'rgba(var(--color-primary-rgb), 0.14)',
+                          fontWeight: 'var(--font-weight-semibold)',
+                          cursor: generatingQuizId === video.id ? 'wait' : 'pointer',
+                          opacity: generatingQuizId === video.id ? 0.7 : 1,
+                        }}
+                      >
+                        {generatingQuizId === video.id ? 'Generating AI quiz...' : 'Generate AI quiz'}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleStartEdit(video)}
@@ -633,6 +698,73 @@ export default function CreatorDashboard() {
                               padding: '0.95rem 1rem',
                             }}
                           />
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            Category
+                          </span>
+                          <select
+                            value={editForm.primaryCategory}
+                            onChange={(event) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                primaryCategory: event.target.value,
+                                category: '',
+                              }))
+                            }
+                            style={{
+                              width: '100%',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--color-border)',
+                              background: 'rgba(14, 33, 56, 0.88)',
+                              color: 'var(--color-text-light)',
+                              font: 'inherit',
+                              padding: '0.95rem 1rem',
+                            }}
+                          >
+                            <option value="">Select a category</option>
+                            {PRIMARY_CATEGORIES.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            Topic label
+                          </span>
+                          <select
+                            value={editForm.category}
+                            onChange={(event) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                category: event.target.value,
+                              }))
+                            }
+                            disabled={!editForm.primaryCategory}
+                            style={{
+                              width: '100%',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--color-border)',
+                              background: 'rgba(14, 33, 56, 0.88)',
+                              color: 'var(--color-text-light)',
+                              font: 'inherit',
+                              padding: '0.95rem 1rem',
+                              opacity: editForm.primaryCategory ? 1 : 0.7,
+                            }}
+                          >
+                            <option value="">
+                              {editForm.primaryCategory ? 'Select a topic' : 'Choose a category first'}
+                            </option>
+                            {(SUB_CATEGORIES[editForm.primaryCategory] || []).map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
                         </label>
 
                         <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -720,8 +852,7 @@ export default function CreatorDashboard() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
           <p style={{ margin: 0, color: 'var(--color-text-muted)', lineHeight: 'var(--line-height-relaxed)' }}>
-            This uses the real delete endpoint and removes the lesson from your creator
-            dashboard. It does not have an undo flow in the current backend.
+            Deleting this lesson removes it from your creator dashboard and learners will no longer be able to open it. This action cannot be undone.
           </p>
 
           <div style={{

@@ -19,11 +19,11 @@ function getRoleLabel(role, hasVideos) {
 }
 
 function getProfileSourceLabel(source) {
-  if (source === 'backend-profile') return 'Backend profile'
-  if (source === 'auth') return 'Authenticated session'
-  if (source === 'route-id') return 'Numeric creator route'
-  if (source === 'route-name') return 'Username route only'
-  return 'Route fallback'
+  if (source === 'backend-profile') return 'Profile directory'
+  if (source === 'auth') return 'Signed-in account'
+  if (source === 'route-id') return 'Creator route'
+  if (source === 'route-name') return 'Profile route'
+  return 'Profile lookup'
 }
 
 export default function Profile() {
@@ -129,25 +129,25 @@ export default function Profile() {
         {
           label: 'Role',
           value: roleLabel,
-          helper: 'Derived from your authenticated session when available',
+          helper: 'Pulled from your account when available',
         },
         {
           label: 'Published lessons',
           value: profileSummary?.published_video_count ?? videos.length,
-          helper: 'Loaded from the backend profile endpoint',
+          helper: 'Included in your profile summary',
         },
         {
-          label: playlistsSource === 'backend' ? 'Learning paths' : 'Fallback paths',
+          label: 'Learning paths',
           value: customPlaylists.length,
           helper:
             playlistsSource === 'backend'
-              ? 'Private playlists from the backend learning-path system'
-              : 'Private fallback playlists stored in this browser',
+              ? 'Private paths linked to your account'
+              : 'Private paths available on this device',
         },
         {
           label: 'Subscribers',
           value: profileSummary?.subscriber_count ?? '--',
-          helper: 'Returned by the backend profile endpoint when available',
+          helper: 'Shown when subscriber totals are available',
         },
       ]
     : [
@@ -159,17 +159,17 @@ export default function Profile() {
         {
           label: 'Published lessons',
           value: profileSummary?.published_video_count ?? videos.length,
-          helper: 'Videos returned by the backend profile endpoint',
+          helper: 'Lessons currently shown on this profile',
         },
         {
           label: 'Profile source',
           value: getProfileSourceLabel(resolvedProfile.source),
-          helper: 'Explains how this page resolved the profile',
+          helper: 'How this page identified the profile',
         },
         {
           label: 'Subscribers',
           value: profileSummary?.subscriber_count ?? '--',
-          helper: 'Returned when the backend profile endpoint has that metadata',
+          helper: 'Shown when subscriber totals are available',
         },
       ]
 
@@ -195,10 +195,10 @@ export default function Profile() {
             <h1 className={styles.title}>{resolvedProfile.username || requestedIdentity}</h1>
             <p className={styles.subtitle}>
                 {isCurrentUser
-                  ? 'This page blends backend creator data with your local learning-path and progress MVP so your identity feels like a learner profile, not only a channel page.'
+                  ? 'See your published lessons, your learning activity, and the parts of your profile that shape your study flow.'
                   : canHydrateProfile
-                  ? 'This creator page is grounded in the backend profile endpoint, with graceful fallbacks where public identity data is still limited.'
-                  : 'The current profile lookup could not be resolved, so this page is using the safest available fallback identity data.'}
+                  ? 'Explore this creator’s public lessons, profile details, and published learning content.'
+                  : 'This profile could not be fully loaded, so some public details may be limited right now.'}
             </p>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function Profile() {
         <div className={styles.heroMeta}>
           <span className={styles.roleBadge}>{roleLabel}</span>
           {isCurrentUser ? (
-            <span className={styles.sourceBadge}>Local learning data is private to this browser</span>
+            <span className={styles.sourceBadge}>Your personal study details stay private</span>
           ) : (
             <span className={styles.sourceBadge}>
               {getProfileSourceLabel(resolvedProfile.source)}
@@ -249,8 +249,8 @@ export default function Profile() {
               </strong>
               <span className={styles.detailNote}>
                 {isCurrentUser
-                  ? 'Uses your active auth session as the most reliable identity source.'
-                  : 'Public creator pages prefer the backend profile endpoint when a stable identifier can be resolved.'}
+                  ? 'Uses your signed-in account as the most reliable identity source.'
+                  : 'Public creator pages use the strongest available profile match.'}
               </span>
             </div>
 
@@ -261,8 +261,8 @@ export default function Profile() {
               </strong>
               <span className={styles.detailNote}>
                 {canHydrateProfile
-                  ? 'Creator details and lesson shelves below are backend-connected.'
-                  : 'This route can show the requested identity, but it could not fully hydrate the backend profile.'}
+                  ? 'Creator details and lesson shelves are available below.'
+                  : 'This route can show the requested identity, but some creator details are still unavailable.'}
               </span>
             </div>
 
@@ -272,7 +272,7 @@ export default function Profile() {
                 {profileSummary?.subscriber_count ?? 'Unavailable'}
               </strong>
               <span className={styles.detailNote}>
-                Subscriber counts now come from the backend profile endpoint when available.
+                Subscriber totals appear here when they are available for this profile.
               </span>
             </div>
           </div>
@@ -296,7 +296,7 @@ export default function Profile() {
                 <span className={styles.detailLabel}>Saved path lessons</span>
                 <strong className={styles.detailValue}>{savedPath?.items.length || 0}</strong>
                 <span className={styles.detailNote}>
-                  Lessons saved to your default local learning path.
+                  Lessons saved to your default study path.
                 </span>
               </div>
 
@@ -305,8 +305,8 @@ export default function Profile() {
                 <strong className={styles.detailValue}>{customPlaylists.length}</strong>
                 <span className={styles.detailNote}>
                   {playlistsSource === 'backend'
-                    ? 'These playlists now come from the backend learning-path system.'
-                    : 'These playlists are using local fallback data in this browser.'}
+                    ? 'These learning paths stay linked to your account.'
+                    : 'These learning paths are currently available on this device.'}
                 </span>
               </div>
 
@@ -314,7 +314,7 @@ export default function Profile() {
                 <span className={styles.detailLabel}>Resume-ready lessons</span>
                 <strong className={styles.detailValue}>{resumeReadyLessons}</strong>
                 <span className={styles.detailNote}>
-                  Lessons with local progress that are not complete yet.
+                  Lessons with saved progress that are not complete yet.
                 </span>
               </div>
 
@@ -324,7 +324,7 @@ export default function Profile() {
                 <span className={styles.detailNote}>
                   {latestCompletedPath
                     ? `Latest completion: ${latestCompletedPath.title} on ${formatNumericDate(latestCompletedPath.completedAt)}.`
-                    : 'No local playlist completion has been recorded yet.'}
+                    : 'No completed learning path has been recorded yet.'}
                 </span>
               </div>
             </div>
@@ -332,8 +332,7 @@ export default function Profile() {
             <div className={styles.emptyState}>
               <h3 className={styles.emptyTitle}>Learning paths stay private for now</h3>
               <p className={styles.emptyText}>
-                Playlist and progress data are still local MVP features, so they are only
-                shown on your own signed-in profile and are not exposed on public creator pages.
+                Personal learning paths and study progress are only shown on your own signed-in profile.
               </p>
             </div>
           )}
@@ -361,11 +360,9 @@ export default function Profile() {
 
         {!canHydrateProfile ? (
           <div className={styles.emptyState}>
-            <h3 className={styles.emptyTitle}>Public username lookup is not available yet</h3>
+            <h3 className={styles.emptyTitle}>This profile is not available</h3>
             <p className={styles.emptyText}>
-              The backend can load creator videos by numeric user id and for your own
-              authenticated profile, but it does not currently expose a route to resolve
-              arbitrary public usernames.
+              We could not find enough public profile data to show this creator’s lesson library.
             </p>
           </div>
         ) : videos.length > 0 ? (
@@ -378,8 +375,7 @@ export default function Profile() {
           <div className={styles.emptyState}>
             <h3 className={styles.emptyTitle}>No published lessons yet</h3>
             <p className={styles.emptyText}>
-              This profile does not currently have any creator videos returned by
-              the backend profile endpoint.
+              This profile does not have any published lessons to show yet.
             </p>
           </div>
         )}

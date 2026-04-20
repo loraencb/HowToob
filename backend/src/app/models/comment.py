@@ -17,6 +17,12 @@ class Comment(db.Model):
     )
 
     user = db.relationship("User", backref="comments", lazy=True)
+    likes = db.relationship(
+        "CommentLike",
+        backref="comment",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
     replies = db.relationship(
         "Comment",
         backref=db.backref("parent", remote_side=[id]),
@@ -24,7 +30,14 @@ class Comment(db.Model):
         cascade="all, delete-orphan",
     )
 
-    def to_dict(self):
+    def to_dict(self, viewer_id=None):
+        like_count = len(self.likes)
+        viewer_liked = (
+            any(like.user_id == viewer_id for like in self.likes)
+            if viewer_id is not None
+            else False
+        )
+
         return {
             "id": self.id,
             "content": self.content,
@@ -32,5 +45,7 @@ class Comment(db.Model):
             "username": self.user.username if self.user else None,
             "video_id": self.video_id,
             "parent_id": self.parent_id,
+            "like_count": like_count,
+            "viewer_liked": viewer_liked,
             "created_at": self.created_at.isoformat(),
         }

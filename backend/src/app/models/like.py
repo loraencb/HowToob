@@ -7,6 +7,7 @@ class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     video_id = db.Column(db.Integer, db.ForeignKey("videos.id"), nullable=False)
+    rating = db.Column(db.Integer, nullable=False, default=5)
 
     __table_args__ = (
         db.UniqueConstraint("user_id", "video_id", name="unique_user_video_like"),

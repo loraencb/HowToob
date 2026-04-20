@@ -128,12 +128,12 @@ export default function MyPlaylists() {
 
         <div className={styles.heroNote}>
           <span className={styles.localBadge}>
-            {playlistsSource === 'backend' ? 'Backend sync' : 'Local fallback'}
+            {playlistsSource === 'backend' ? 'Synced' : 'Saved on this device'}
           </span>
           <p className={styles.noteText}>
             {playlistsSource === 'backend'
-              ? 'Learning paths now use backend playlist storage and ordering.'
-              : 'Backend playlists are unavailable right now, so this page is using local fallback data from this browser.'}
+              ? 'Your learning paths stay organized and ready across the app.'
+              : 'Your learning paths are still available here on this device.'}
           </p>
         </div>
       </section>
@@ -197,7 +197,7 @@ export default function MyPlaylists() {
                 <strong className={styles.tipLabel}>1. Save lessons</strong>
                 <p className={styles.tipText}>
                   The watch page can save lessons directly into your default learning
-                  path for later using the current playlist backend.
+                  path so you can collect them for later.
                 </p>
               </div>
               <div className={styles.tipItem}>
@@ -220,7 +220,7 @@ export default function MyPlaylists() {
             <div className={styles.panelHeader}>
               <div>
                 <p className={styles.panelEyebrow}>Suggested lessons</p>
-                <h2 className={styles.panelTitle}>Use the live backend feed</h2>
+                <h2 className={styles.panelTitle}>Start from the lesson library</h2>
               </div>
             </div>
 
@@ -237,7 +237,7 @@ export default function MyPlaylists() {
                         {truncate(video.title, 60)}
                       </Link>
                       <p className={styles.suggestionMeta}>
-                        Open from the backend feed, then save it into a path from the watch page.
+                        Open the lesson, then save it into a path from the watch page.
                       </p>
                     </div>
                     <Link to={`/watch/${video.id}`} className={styles.inlineLink}>
@@ -251,7 +251,7 @@ export default function MyPlaylists() {
                 <h3 className={styles.emptyTitle}>Suggestions are waiting on feed data</h3>
                 <p className={styles.emptyText}>
                   {suggestionsError ||
-                    'Once `/videos/feed` returns lessons, this panel becomes a quick way to start a path from live content.'}
+                    'Suggested lessons will appear here as your library fills out.'}
                 </p>
               </div>
             )}
@@ -289,7 +289,7 @@ export default function MyPlaylists() {
                     </div>
                     <p className={styles.cardDescription}>
                       {playlist.description ||
-                        'A lightweight course path you can keep refining locally.'}
+                        'A structured path you can keep refining over time.'}
                     </p>
                   </div>
                 </div>

@@ -10,6 +10,7 @@ import { usersAPI, videosAPI } from '../utils/api'
 import { getCreatorName } from '../utils/lessonMetadata'
 import {
   formatNumericDate,
+  formatRatingSummary,
   formatRelativeTime,
   formatViewCount,
   formatWatchTime,
@@ -207,9 +208,7 @@ export default function Dashboard() {
       value: playlistCount,
       helper:
         playlistCount > 0
-          ? playlistsSource === 'backend'
-            ? 'Backend learning paths ready to continue'
-            : 'Local fallback paths ready to continue'
+          ? 'Learning paths ready to continue'
           : 'Create a path to structure your lessons',
     },
     {
@@ -316,9 +315,7 @@ export default function Dashboard() {
                     </Link>
                     <p className={styles.continueText}>
                       {continueCard.progress
-                        ? progressSource === 'backend'
-                          ? 'This card is driven by your synced backend progress so recent lessons are easier to resume across the app.'
-                          : 'Backend progress is unavailable right now, so this card is using local fallback progress from this browser.'
+                        ? 'Your latest lesson is ready to resume right where you left off.'
                         : 'You have not started a lesson in this session yet, so this card is highlighting a strong place to jump back in.'}
                     </p>
 
@@ -350,6 +347,8 @@ export default function Dashboard() {
                     <div className={styles.continueMeta}>
                       <span>{formatViewCount(continueCard.video.views || 0)} views</span>
                       <span className={styles.metaDot}>•</span>
+                      <span>{formatRatingSummary(continueCard.video.average_rating, continueCard.video.rating_count ?? continueCard.video.like_count)}</span>
+                      <span>|</span>
                       <span>{formatNumericDate(continueCard.video.created_at)}</span>
                     </div>
 
@@ -449,9 +448,7 @@ export default function Dashboard() {
                 </div>
 
                 <p className={styles.snapshotFootnote}>
-                  {progressSource === 'backend'
-                    ? 'Progress cards now prefer backend watch state. Quiz attempts and playlist completion badges still stay local until those features fully sync.'
-                    : 'Progress is currently falling back to this browser, while quiz stats and playlist completion badges remain local MVP features.'}
+                  Keep an eye on your time invested, quiz activity, and completed paths as your study history grows.
                 </p>
               </article>
             </aside>
@@ -494,6 +491,8 @@ export default function Dashboard() {
                     <div className={styles.recentMeta}>
                       <span>{formatViewCount(video.views || 0)} views</span>
                       <span className={styles.metaDot}>•</span>
+                      <span>{formatRatingSummary(video.average_rating, video.rating_count ?? video.like_count)}</span>
+                      <span>|</span>
                       <span>{formatNumericDate(video.created_at)}</span>
                     </div>
                   </article>
@@ -517,7 +516,7 @@ export default function Dashboard() {
                 <h2 className={styles.sectionTitle}>Lessons from creators you follow</h2>
               </div>
               <span className={styles.sectionHint}>
-                Filtered from the current backend feed using your subscription list
+                Curated from the creators you already follow
               </span>
             </div>
 
@@ -531,7 +530,7 @@ export default function Dashboard() {
               <article className={styles.placeholderWide}>
                 <h3 className={styles.placeholderTitle}>Subscription lessons will appear here</h3>
                 <p className={styles.placeholderText}>
-                  You may need more followed creators or more matching feed items before this shelf fills in.
+                  Follow more creators or check back later to grow this shelf with fresh lessons.
                 </p>
               </article>
             )}
@@ -544,7 +543,7 @@ export default function Dashboard() {
                 <h2 className={styles.sectionTitle}>Keep the momentum going</h2>
               </div>
               <span className={styles.sectionHint}>
-                Based on the current feed from the backend
+                Picked to help you keep learning
               </span>
             </div>
 
@@ -558,8 +557,7 @@ export default function Dashboard() {
               <article className={styles.placeholderWide}>
                 <h3 className={styles.placeholderTitle}>Recommendations are waiting on feed data</h3>
                 <p className={styles.placeholderText}>
-                  Once `/videos/feed` returns lessons, this section becomes your
-                  next-up learning shelf.
+                  More lesson suggestions will appear here as your library grows.
                 </p>
               </article>
             )}
@@ -578,9 +576,7 @@ export default function Dashboard() {
                 <h3 className={styles.placeholderTitle}>Learning paths</h3>
                 <p className={styles.placeholderText}>
                   {playlistCount > 0
-                    ? playlistsSource === 'backend'
-                      ? `${playlistCount} playlist${playlistCount === 1 ? '' : 's'} are now loading from the backend learning-path system.`
-                      : `${playlistCount} playlist${playlistCount === 1 ? '' : 's'} are using local fallback because backend playlist loading is unavailable right now.`
+                    ? `${playlistCount} learning path${playlistCount === 1 ? '' : 's'} ready for your next study session.`
                     : 'Create a learning path to start organizing lessons into a structured course.'}
                 </p>
                 <Link to="/my-playlists" className={styles.inlineAction}>
@@ -592,11 +588,10 @@ export default function Dashboard() {
                 <h3 className={styles.placeholderTitle}>Milestones and streaks</h3>
                 <p className={styles.placeholderText}>
                   Certificates, streaks, and deeper learning milestones will fit here
-                  after the platform adds richer backend milestone tracking.
+                  as your learning profile expands.
                 </p>
                 <span className={styles.placeholderHint}>
-                  For now, the dashboard focuses on live feed data, synced progress
-                  where available, and honest MVP fallbacks elsewhere.
+                  For now, this dashboard keeps the focus on active lessons, saved paths, and your next best step.
                 </span>
               </article>
             </div>

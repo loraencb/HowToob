@@ -205,6 +205,12 @@
   flex-direction: column;
 }
 
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+
 .labelRow {
   display: flex;
   justify-content: space-between;
@@ -222,7 +228,8 @@
 }
 
 .textInput,
-.textArea {
+.textArea,
+.selectInput {
   width: 100%;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -238,10 +245,25 @@
 }
 
 .textInput:focus,
-.textArea:focus {
+.textArea:focus,
+.selectInput:focus {
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.16);
   outline: none;
+}
+
+.selectInput {
+  appearance: none;
+  min-height: 52px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 4px),
+    calc(100% - 16px) calc(50% - 4px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 3rem;
 }
 
 .textArea {
@@ -443,6 +465,41 @@
   line-height: var(--line-height-relaxed);
 }
 
+.quizStatus {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  line-height: var(--line-height-relaxed);
+}
+
+.quizStatusSuccess {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.22);
+  color: var(--color-text-light);
+}
+
+.quizStatusWarning {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.22);
+  color: var(--color-text-light);
+}
+
+.quizStatusMuted {
+  background: rgba(var(--color-primary-rgb), 0.08);
+  border-color: rgba(var(--color-primary-rgb), 0.16);
+  color: var(--color-text-light);
+}
+
+.quizStatusLabel {
+  color: var(--color-text-light);
+}
+
+.quizHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
 .successActions {
   display: flex;
   gap: var(--space-md);
@@ -473,7 +530,8 @@
   .hero,
   .layout,
   .successPreview,
-  .dropGrid {
+  .dropGrid,
+  .categoryGrid {
     grid-template-columns: 1fr;
     flex-direction: column;
   }

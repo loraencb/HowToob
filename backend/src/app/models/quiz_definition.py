@@ -22,7 +22,15 @@ class QuizDefinition(db.Model):
         nullable=False,
     )
 
-    video = db.relationship("Video", backref=db.backref("quiz_definition", uselist=False))
+    video = db.relationship(
+        "Video",
+        backref=db.backref(
+            "quiz_definition",
+            uselist=False,
+            cascade="all, delete-orphan",
+            single_parent=True,
+        ),
+    )
 
     def to_dict(self, include_answers=False):
         questions = []

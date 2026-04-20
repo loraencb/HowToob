@@ -8,7 +8,10 @@ import { socialAPI, usersAPI, videosAPI } from '../utils/api'
 import { addLocalReport } from '../utils/moderationMvp'
 import { PROGRESS_SAVE_INTERVAL_MS } from '../utils/constants'
 import {
+  formatAverageRating,
   formatNumericDate,
+  formatRatingCount,
+  formatRatingSummary,
   formatRelativeTime,
   formatViewCount,
   getInitials,
@@ -26,6 +29,7 @@ function cleanTitle(title) {
 }
 
 const EXPLORE_MORE_VIEW_COUNTS = [132, 187, 241, 316, 402, 489]
+const VIDEO_RATING_OPTIONS = [1, 2, 3, 4, 5]
 
 function normalizeVideoResponse(data) {
   const raw = data?.video ?? data?.data ?? data ?? null
@@ -40,7 +44,18 @@ function normalizeVideoResponse(data) {
     created_at: raw.created_at || new Date().toISOString(),
     video_url: raw.video_url || raw.file_url || raw.url || '',
     thumbnail_url: raw.thumbnail_url || raw.thumbnail || '',
+    rating_count: Number(raw.rating_count ?? raw.like_count ?? 0) || 0,
+    average_rating: Number(raw.average_rating ?? 0) || 0,
+    viewer_rating: Number(raw.viewer_rating ?? 0) || 0,
     category: raw.category || raw.subject || raw.topic || '',
+    quiz:
+      raw.quiz || {
+        available: false,
+        status: 'unavailable',
+        reason: null,
+        question_count: 0,
+        note: 'No lesson quiz is available yet.',
+      },
     author_name:
       raw.author_name ||
       raw.creator_name ||
@@ -68,19 +83,56 @@ function normalizeFeedResponse(data) {
 }
 
 function normalizeCommentsResponse(data) {
-  if (Array.isArray(data)) return data
-  if (Array.isArray(data?.comments)) return data.comments
-  if (Array.isArray(data?.results)) return data.results
-  if (Array.isArray(data?.items)) return data.items
-  return []
+  const rawComments = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.comments)
+      ? data.comments
+      : Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data?.items)
+          ? data.items
+          : []
+
+  const flattened = []
+
+  function visit(comment, fallbackParentId = null) {
+    if (!comment) return
+
+    flattened.push(
+      normalizeComment({
+        ...comment,
+        parent_id: comment.parent_id ?? comment.parentId ?? fallbackParentId,
+      })
+    )
+
+    const replies = Array.isArray(comment.replies)
+      ? comment.replies
+      : Array.isArray(comment.children)
+        ? comment.children
+        : []
+
+    replies.forEach((reply) => visit(reply, comment.id))
+  }
+
+  rawComments.forEach((comment) => visit(comment))
+  return flattened
+}
+
+function normalizeEntityId(value) {
+  if (value === null || value === undefined || value === '') return null
+
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : value
 }
 
 function normalizeComment(comment) {
   return {
     ...comment,
-    id: comment.id,
-    parent_id: comment.parent_id ?? comment.parentId ?? null,
+    id: normalizeEntityId(comment.id),
+    parent_id: normalizeEntityId(comment.parent_id ?? comment.parentId ?? null),
     content: comment.content || comment.text || '',
+    like_count: Number(comment.like_count ?? comment.likeCount ?? 0) || 0,
+    viewer_liked: Boolean(comment.viewer_liked ?? comment.viewerLiked ?? false),
     created_at: comment.created_at || comment.createdAt || new Date().toISOString(),
     username:
       comment.username ||
@@ -109,7 +161,31 @@ function buildCommentTree(comments) {
     }
   })
 
+  const sortByCreatedAt = (left, right) =>
+    new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+
+  const sortTree = (nodes) => {
+    nodes.sort(sortByCreatedAt)
+    nodes.forEach((node) => sortTree(node.replies))
+  }
+
+  sortTree(roots)
   return roots
+}
+
+function mergeComments(existingComments, nextComments) {
+  const mergedById = new Map()
+
+  ;[...existingComments, ...nextComments].forEach((comment) => {
+    const normalized = normalizeComment(comment)
+    if (normalized.id === null || normalized.id === undefined) return
+    mergedById.set(normalized.id, normalized)
+  })
+
+  return Array.from(mergedById.values()).sort(
+    (left, right) =>
+      new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+  )
 }
 
 function CommentItem({
@@ -118,6 +194,8 @@ function CommentItem({
   replyingTo,
   replyDrafts,
   submittingCommentId,
+  likingCommentId,
+  onLikeToggle,
   onReplyStart,
   onReplyCancel,
   onReplyChange,
@@ -143,8 +221,22 @@ function CommentItem({
           <p className={styles.commentText}>{comment.content}</p>
         </div>
 
-        {isAuthenticated && (
-          <div className={styles.commentActions}>
+        <div className={styles.commentActions}>
+          <button
+            type="button"
+            className={`${styles.commentLikeButton} ${
+              comment.viewer_liked ? styles.commentLikeButtonActive : ''
+            }`}
+            onClick={() => onLikeToggle(comment.id)}
+            disabled={likingCommentId === comment.id}
+            aria-pressed={comment.viewer_liked}
+          >
+            <span>{likingCommentId === comment.id ? 'Saving...' : 'Like'}</span>
+            <span className={styles.commentLikeCount}>{comment.like_count || 0}</span>
+          </button>
+
+          {isAuthenticated && (
+            <>
             <button
               type="button"
               className={styles.replyButton}
@@ -165,8 +257,9 @@ function CommentItem({
             >
               Report
             </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
 
         {replyingTo === comment.id && (
           <form
@@ -212,6 +305,8 @@ function CommentItem({
                 replyingTo={replyingTo}
                 replyDrafts={replyDrafts}
                 submittingCommentId={submittingCommentId}
+                likingCommentId={likingCommentId}
+                onLikeToggle={onLikeToggle}
                 onReplyStart={onReplyStart}
                 onReplyCancel={onReplyCancel}
                 onReplyChange={onReplyChange}
@@ -261,13 +356,11 @@ export default function Watch() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
 
-  const [liked, setLiked] = useState(false)
-  const [disliked, setDisliked] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
   const [subscriptionTier, setSubscriptionTier] = useState(0)
   const [interactionNotice, setInteractionNotice] = useState('')
   const [interactionError, setInteractionError] = useState('')
-  const [likeLoading, setLikeLoading] = useState(false)
+  const [ratingLoading, setRatingLoading] = useState(false)
   const [subscribeLoading, setSubscribeLoading] = useState(false)
   const [resumeNotice, setResumeNotice] = useState('')
   const [playlistNotice, setPlaylistNotice] = useState('')
@@ -285,6 +378,7 @@ export default function Watch() {
   const [replyDrafts, setReplyDrafts] = useState({})
   const [replyingTo, setReplyingTo] = useState(null)
   const [submittingCommentId, setSubmittingCommentId] = useState(null)
+  const [likingCommentId, setLikingCommentId] = useState(null)
 
   const commentTree = useMemo(() => buildCommentTree(comments), [comments])
   const activePlaylistId = searchParams.get('playlist')
@@ -360,8 +454,6 @@ export default function Watch() {
     setReportTarget(null)
     setReportReason('spam')
     setReportDetails('')
-    setLiked(false)
-    setDisliked(false)
     setSubscribed(false)
     setSubscriptionTier(0)
     lastPersistedSecondsRef.current = 0
@@ -430,7 +522,7 @@ export default function Watch() {
 
       try {
         const data = await socialAPI.getComments(videoId)
-        const normalizedComments = normalizeCommentsResponse(data).map(normalizeComment)
+        const normalizedComments = normalizeCommentsResponse(data)
         setComments(normalizedComments)
       } catch (err) {
         setComments([])
@@ -441,7 +533,7 @@ export default function Watch() {
     }
 
     fetchComments()
-  }, [videoId])
+  }, [isAuthenticated, user?.id, videoId])
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id || !video?.creator_id) {
@@ -628,7 +720,7 @@ export default function Watch() {
         setCurrentTime(safeResume)
         setResumeNotice(
           `Resumed from ${formatTime(safeResume)} using ${
-            progressSource === 'backend' ? 'backend progress' : 'local fallback progress'
+            progressSource === 'backend' ? 'saved progress' : 'progress on this device'
           }.`
         )
         lastPersistedSecondsRef.current = safeResume
@@ -641,7 +733,7 @@ export default function Watch() {
   const handlePlaybackError = () => {
     setInteractionNotice('')
     setInteractionError(
-      'The lesson stream could not be loaded on this device. Check that the backend is reachable over the LAN, your session is still valid here, and the host machine firewall allows video traffic.'
+      'The lesson could not be loaded on this device. Check your connection, sign in again if needed, and make sure the host machine is still running.'
     )
   }
 
@@ -735,7 +827,7 @@ export default function Watch() {
         created?.comment ?? created?.data ?? created
       )
 
-      setComments((prev) => [...prev, normalizedCreated])
+      setComments((prev) => mergeComments(prev, [normalizedCreated]))
       setCommentDraft('')
       setCommentsError('')
     } catch (err) {
@@ -758,7 +850,7 @@ export default function Watch() {
         created?.comment ?? created?.data ?? created
       )
 
-      setComments((prev) => [...prev, normalizedCreated])
+      setComments((prev) => mergeComments(prev, [normalizedCreated]))
       setReplyDrafts((prev) => ({ ...prev, [parentId]: '' }))
       setReplyingTo(null)
       setCommentsError('')
@@ -769,51 +861,69 @@ export default function Watch() {
     }
   }
 
-  const handleLikeToggle = async () => {
+  const handleRatingChange = async (rating) => {
     if (!isAuthenticated) {
-      setInteractionError('Sign in to save helpful feedback on lessons.')
+      setInteractionError('Sign in to rate lessons and save learning feedback.')
       setInteractionNotice('')
       return
     }
 
-    setLikeLoading(true)
+    setRatingLoading(true)
     setInteractionError('')
     setInteractionNotice('')
 
     try {
-      const result = await socialAPI.toggleLike(videoId)
-      const nextLiked = Boolean(result?.liked)
-
-      setLiked(nextLiked)
-      setDisliked(false)
+      const result = await socialAPI.rateVideo(videoId, rating)
       setVideo((prev) =>
         prev
           ? {
               ...prev,
-              like_count: Math.max(
-                0,
-                (prev.like_count || 0) + (nextLiked ? 1 : -1)
-              ),
+              rating_count: Number(result?.rating_count ?? prev.rating_count ?? prev.like_count ?? 0) || 0,
+              average_rating: Number(result?.average_rating ?? prev.average_rating ?? 0) || 0,
+              viewer_rating: Number(result?.viewer_rating ?? rating) || rating,
+              like_count: Number(result?.rating_count ?? prev.rating_count ?? prev.like_count ?? 0) || 0,
             }
           : prev
       )
-      setInteractionNotice(
-        nextLiked ? 'Lesson marked as helpful.' : 'Helpful reaction removed.'
-      )
+      setInteractionNotice(`Saved your ${rating}-star rating for this lesson.`)
     } catch (err) {
-      setInteractionError(err.message || 'Could not update your feedback.')
+      setInteractionError(err.message || 'Could not update your lesson rating.')
     } finally {
-      setLikeLoading(false)
+      setRatingLoading(false)
     }
   }
 
-  const handleDislikeToggle = () => {
-    setDisliked((prev) => !prev)
-    setLiked(false)
-    setInteractionError('')
-    setInteractionNotice(
-      'Dislike feedback is currently a local-only prototype and is not sent to the backend yet.'
-    )
+  const handleCommentLikeToggle = async (commentId) => {
+    if (!isAuthenticated) {
+      setCommentsError('Sign in to like comments and replies.')
+      return
+    }
+
+    setLikingCommentId(commentId)
+    setCommentsError('')
+
+    try {
+      const result = await socialAPI.toggleCommentLike(commentId)
+      const normalizedCommentId = normalizeEntityId(result?.comment_id ?? commentId)
+      const nextLikeCount = Number(result?.like_count ?? 0) || 0
+      const nextViewerLiked = Boolean(result?.liked)
+
+      setComments((prev) =>
+        prev.map((comment) =>
+          normalizeEntityId(comment.id) === normalizedCommentId
+            ? normalizeComment({
+                ...comment,
+                like_count: nextLikeCount,
+                viewer_liked: nextViewerLiked,
+              })
+            : comment
+        )
+      )
+    } catch (err) {
+      setCommentsError(err.message || 'Failed to update comment like.')
+    } finally {
+      setLikingCommentId(null)
+    }
   }
 
   const handleSubscribe = async (requestedTier = 0) => {
@@ -836,7 +946,7 @@ export default function Watch() {
       setInteractionNotice(
         nextTier > 0
           ? `You already have Tier ${subscriptionTier} access for this creator.`
-          : 'You are already following this creator. Unsubscribe is not supported by the current backend yet.'
+          : 'You are already following this creator.'
       )
       setInteractionError('')
       return
@@ -853,7 +963,7 @@ export default function Watch() {
       setInteractionNotice(
         nextTier > 0
           ? `Access upgraded to Tier ${Math.max(nextTier, Number(result?.tier_level || 0))}. Reloading this lesson now.`
-          : 'Creator added to your subscriptions. Future dashboard shelves will use this backend data.'
+          : 'Creator added to your subscriptions. Their lessons will show up more often across your learning pages.'
       )
 
       if (nextTier > 0) {
@@ -873,7 +983,7 @@ export default function Watch() {
     if (!isAuthenticated) {
       setPlaylistNotice('')
       setInteractionNotice('')
-      setInteractionError('Sign in to save lessons into a backend learning path.')
+      setInteractionError('Sign in to save lessons into a learning path.')
       return
     }
 
@@ -935,7 +1045,7 @@ export default function Watch() {
 
     if (!isAuthenticated) {
       setReportFeedbackMode('error')
-      setReportFeedback('Sign in to submit reports to the moderation backend.')
+      setReportFeedback('Sign in to submit a report.')
       closeReport()
       return
     }
@@ -953,14 +1063,14 @@ export default function Watch() {
       })
 
       setReportFeedback(
-        'Report submitted to the moderation backend. Review status is not surfaced in the learner UI yet.'
+        'Report submitted successfully.'
       )
       setReportFeedbackMode('backend')
       closeReport()
     } catch (requestError) {
       if (requestError?.code === 'DUPLICATE_REPORT') {
         setReportFeedback(
-          'You already submitted a pending report for this content. The backend rejected a duplicate report.'
+          'You already have a report open for this content.'
         )
         setReportFeedbackMode('backend')
         closeReport()
@@ -980,7 +1090,7 @@ export default function Watch() {
         })
 
         setReportFeedback(
-          'The moderation backend is unavailable right now, so this report was saved locally as a temporary fallback.'
+          'Your report was saved on this device and will remain available here.'
         )
         setReportFeedbackMode('local')
         closeReport()
@@ -1034,8 +1144,15 @@ export default function Watch() {
       value: activePlaylist ? activePlaylist.title : 'Independent lesson',
     },
     { label: 'Access', value: accessMetadata.badgeLabel },
-    { label: 'Progress source', value: progressSource === 'backend' ? 'Backend sync' : 'Local fallback' },
+    { label: 'Progress status', value: progressSource === 'backend' ? 'Synced' : 'Saved on this device' },
   ]
+  const quizMetadata = video?.quiz || {
+    available: false,
+    status: 'unavailable',
+    reason: null,
+    question_count: 0,
+    note: 'No lesson quiz is available yet.',
+  }
   const upNextHref = nextPlaylistItem
     ? `/watch/${nextPlaylistItem.videoId}?playlist=${activePlaylist?.id}`
     : upNextVideo?.id
@@ -1401,6 +1518,8 @@ export default function Watch() {
                   <div className={styles.videoMeta}>
                     <span>{formatViewCount(video.views || 0)} views</span>
                     <span className={styles.dotSeparator}>•</span>
+                    <span>{formatRatingSummary(video.average_rating, video.rating_count ?? video.like_count)}</span>
+                    <span>|</span>
                     <span>{formatNumericDate(video.created_at)}</span>
                   </div>
                 </div>
@@ -1428,7 +1547,7 @@ export default function Watch() {
                 <p className={styles.creatorSupportText}>
                   {activePlaylist
                     ? `You are learning inside ${activePlaylist.title}. Up next will stay in order so the path behaves like a course.`
-                    : 'This lesson is currently outside a saved path, so discovery and up-next suggestions come from the live backend feed.'}
+                    : 'This lesson is not currently inside a saved path, so the next suggestions come from your broader lesson library.'}
                 </p>
               </div>
 
@@ -1459,50 +1578,62 @@ export default function Watch() {
 
             <div className={styles.actionRow}>
               <div className={styles.engagementActions}>
-                <button
-                  type="button"
-                  className={`${styles.actionChip} ${
-                    liked ? styles.actionChipActive : ''
-                  }`}
-                  onClick={handleLikeToggle}
-                  disabled={likeLoading}
-                  aria-pressed={liked}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M7 10v12" />
-                    <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.97 2.35l-1 7A2 2 0 0 1 18.82 21H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3.76a2 2 0 0 0 1.94-1.53L13 2a2 2 0 0 1 2 2.44Z" />
-                  </svg>
-                  <span>{likeLoading ? 'Saving...' : 'Like'}</span>
-                </button>
+                <div className={styles.ratingPanel}>
+                  <div className={styles.ratingSummary}>
+                    <strong className={styles.ratingAverage}>
+                      {formatAverageRating(video.average_rating)}
+                    </strong>
+                    <span className={styles.ratingCount}>
+                      {Number(video.rating_count ?? video.like_count ?? 0) > 0
+                        ? `${formatRatingCount(video.rating_count ?? video.like_count)} ratings`
+                        : 'Be the first to rate this lesson'}
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  className={`${styles.actionChip} ${
-                    disliked ? styles.actionChipActive : ''
-                  }`}
-                  onClick={handleDislikeToggle}
-                  aria-pressed={disliked}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+                  <div
+                    className={styles.starRatingRow}
+                    role="radiogroup"
+                    aria-label="Rate this lesson from 1 to 5 stars"
                   >
-                    <path d="M17 14V2" />
-                    <path d="M9 18.12 10 14H4.17A2 2 0 0 1 2.2 11.65l1-7A2 2 0 0 1 5.18 3H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-3.76a2 2 0 0 0-1.94 1.53L11 22a2 2 0 0 1-2-2.44Z" />
-                  </svg>
-                  <span>Dislike</span>
-                </button>
+                    {VIDEO_RATING_OPTIONS.map((rating) => {
+                      const selectedRating = Number(video.viewer_rating || 0)
+                      const active = rating <= selectedRating
+
+                      return (
+                        <button
+                          key={rating}
+                          type="button"
+                          role="radio"
+                          className={`${styles.starRatingButton} ${
+                            active ? styles.starRatingButtonActive : ''
+                          }`}
+                          onClick={() => handleRatingChange(rating)}
+                          disabled={ratingLoading}
+                          aria-label={`Rate this lesson ${rating} out of 5 stars`}
+                          aria-checked={selectedRating === rating}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill={active ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          >
+                            <path d="M12 3.2l2.7 5.48 6.05.88-4.38 4.28 1.03 6.04L12 17.03 6.6 19.88l1.03-6.04L3.25 9.56l6.05-.88L12 3.2z" />
+                          </svg>
+                          <span>{rating}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <p className={styles.ratingHelper}>
+                    {video.viewer_rating
+                      ? `Your rating: ${video.viewer_rating}/5. Tap a different star to update it.`
+                      : 'Rate this lesson from 1 to 5 stars.'}
+                  </p>
+                </div>
 
                 <button
                   type="button"
@@ -1527,14 +1658,30 @@ export default function Watch() {
               </div>
 
               <div className={styles.actionContainer}>
-                <Link to={quizHref} className={styles.quizButton}>
-                  Open lesson quiz
-                </Link>
-                <p className={styles.quizHelper}>
-                  Backend quiz delivery with a local prototype fallback only if the
-                  quiz service is unavailable
-                  {activePlaylist ? ' for this learning path.' : '.'}
-                </p>
+                {quizMetadata.available ? (
+                  <>
+                    <Link to={quizHref} className={styles.quizButton}>
+                      Open lesson quiz
+                    </Link>
+                    <p className={styles.quizHelper}>
+                      Open a quick knowledge check for this lesson
+                      {activePlaylist ? ' within this learning path.' : '.'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.quizButton} aria-disabled="true">
+                      Quiz unavailable
+                    </span>
+                    <p className={styles.quizHelper}>
+                      {quizMetadata.reason === 'insufficient_transcript'
+                        ? 'This lesson does not have enough clear spoken guidance to support a reliable quiz.'
+                        : quizMetadata.status === 'processing'
+                          ? 'A lesson quiz is still being prepared.'
+                          : 'A lesson quiz is not available for this lesson yet.'}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1642,7 +1789,7 @@ export default function Watch() {
                         to={isAuthenticated ? '/settings' : '/login'}
                         className={styles.noticeLink}
                       >
-                        {isAuthenticated ? 'Open fallback reports' : 'Sign in'}
+                        {isAuthenticated ? 'Open saved reports' : 'Sign in'}
                       </Link>
                     ) : null}
                   </div>
@@ -1687,8 +1834,8 @@ export default function Watch() {
 
                 <p className={styles.learningText}>
                   {progressSource === 'backend'
-                    ? 'Progress for this lesson is syncing through the backend watch-event API, with local fallback only if that request fails.'
-                    : 'Backend progress is unavailable right now, so resume state is temporarily falling back to this browser.'}
+                    ? 'Your lesson progress is being saved as you watch.'
+                    : 'Your lesson progress is being kept on this device for now.'}
                 </p>
               </article>
 
@@ -1732,10 +1879,11 @@ export default function Watch() {
                       <p className={styles.upNextText}>
                         {activePlaylist
                           ? 'Stay inside the same learning path and move to the next step in order.'
-                          : 'No playlist context is active, so the next lesson comes from the backend feed.'}
+                          : 'Your next lesson suggestion comes from the wider library.'}
                       </p>
                       <div className={styles.upNextMeta}>
                         <span>{formatViewCount(upNextVideo.views || 0)} views</span>
+                        <span>{formatRatingSummary(upNextVideo.average_rating, upNextVideo.rating_count ?? upNextVideo.like_count)}</span>
                         {upNextVideo.created_at ? (
                           <span>{formatNumericDate(upNextVideo.created_at)}</span>
                         ) : null}
@@ -1820,6 +1968,8 @@ export default function Watch() {
                     replyingTo={replyingTo}
                     replyDrafts={replyDrafts}
                     submittingCommentId={submittingCommentId}
+                    likingCommentId={likingCommentId}
+                    onLikeToggle={handleCommentLikeToggle}
                     onReplyStart={handleReplyStart}
                     onReplyCancel={handleReplyCancel}
                     onReplyChange={handleReplyChange}
@@ -1861,9 +2011,7 @@ export default function Watch() {
       >
         <form className={styles.reportForm} onSubmit={handleReportSubmit}>
           <p className={styles.reportIntro}>
-            Reports submit to the backend moderation route first. If that service is
-            temporarily unavailable, HowToob keeps a local fallback report so your
-            action is not lost.
+            Reports are saved right away so your review request is not lost.
           </p>
 
           <div className={styles.reportTargetCard}>

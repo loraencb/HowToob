@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatViewCount, formatNumericDate, truncate } from '../../utils/formatters'
+import {
+  formatNumericDate,
+  formatRatingSummary,
+  formatViewCount,
+  truncate,
+} from '../../utils/formatters'
 import {
   getAccessMetadata,
   getCreatorName,
@@ -21,6 +26,8 @@ export default function VideoCard({ video, textOnly = false }) {
   const creatorLabel = getCreatorName(video)
   const creatorSlug = getCreatorProfileSlug(video)
   const accessMetadata = getAccessMetadata(video)
+  const ratingCount = Number(video.rating_count ?? video.like_count ?? 0) || 0
+  const averageRating = Number(video.average_rating ?? 0) || 0
   
   const tierConfig = {
     1: { label: 'Tier 1', color: '#2EC4B6' }, // teal/cyan
@@ -122,7 +129,8 @@ export default function VideoCard({ video, textOnly = false }) {
         <div className={styles.cardMeta}>
           <span>{formatViewCount(video.views)} views</span>
           <span className={styles.metaDot} aria-hidden="true">·</span>
-          <span>{formatNumericDate(video.created_at)}</span>
+          <span>{formatRatingSummary(averageRating, ratingCount)}</span>
+          <span>| {formatNumericDate(video.created_at)}</span>
         </div>
 
         {!textOnly ? (

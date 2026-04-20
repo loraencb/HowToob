@@ -1,18 +1,60 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_login import login_required, current_user
-import os
 from ...utils.file_handler import save_file, allowed_file, ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
 from ...services.progress import ProgressService
+from ...services.quiz import QuizService
 from ...services.social import SocialService
 from ...services.video import VideoService
 
 video_bp = Blueprint("video", __name__, url_prefix="/videos")
 
 
+def _build_upload_quiz_generation_payload(video):
+    if not current_app.config.get("QUIZ_AI_AUTO_GENERATE_ON_UPLOAD"):
+        return {
+            "attempted": False,
+            "status": "skipped",
+            "message": "Automatic AI quiz generation is disabled for uploads.",
+        }
+
+    api_key = str(current_app.config.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return {
+            "attempted": False,
+            "status": "skipped",
+            "message": "Automatic AI quiz generation is enabled, but OPENAI_API_KEY is not configured.",
+        }
+
+    payload, error, status = QuizService.generate_ai_quiz(
+        actor_id=current_user.id,
+        video_id=video.id,
+        question_count=current_app.config.get("QUIZ_AI_AUTO_GENERATE_QUESTION_COUNT"),
+        overwrite=False,
+    )
+    if error:
+        return {
+            "attempted": True,
+            "status": "failed",
+            "http_status": status,
+            "message": error,
+        }
+
+    generation = payload.get("generation") or {}
+    return {
+        "attempted": True,
+        "status": "generated",
+        "message": "AI quiz generated from the uploaded lesson.",
+        "provider": generation.get("provider"),
+        "question_count": generation.get("question_count_saved"),
+        "transcript_char_count": generation.get("transcript_char_count"),
+    }
+
+
 @video_bp.route("/", methods=["GET"])
 def list_videos():
     videos = VideoService.get_all_videos()
-    return jsonify([video.to_dict() for video in videos]), 200
+    viewer_id = current_user.id if current_user.is_authenticated else None
+    return jsonify([video.to_dict(viewer_id=viewer_id) for video in videos]), 200
 
 @video_bp.route("/", methods=["POST"])
 @login_required
@@ -40,7 +82,7 @@ def create_video():
         status = 404 if error == "Creator not found" else 400
         return jsonify({"error": error}), status
 
-    return jsonify(video.to_dict()), 201
+    return jsonify(video.to_dict(viewer_id=current_user.id)), 201
 
 
 @video_bp.route("/feed", methods=["GET"])
@@ -55,7 +97,8 @@ def get_feed():
     if limit < 1 or limit > 100:
         return jsonify({"error": "Limit must be between 1 and 100"}), 400
 
-    feed_data = VideoService.get_feed(page=page, limit=limit, search=search)
+    viewer_id = current_user.id if current_user.is_authenticated else None
+    feed_data = VideoService.get_feed(page=page, limit=limit, search=search, viewer_id=viewer_id)
     return jsonify(feed_data), 200
 
 
@@ -66,7 +109,8 @@ def get_creator_videos(user_id):
     if error:
         return jsonify({"error": error}), 404
 
-    return jsonify([video.to_dict() for video in videos]), 200
+    viewer_id = current_user.id if current_user.is_authenticated else None
+    return jsonify([video.to_dict(viewer_id=viewer_id) for video in videos]), 200
 
 
 @video_bp.route("/<int:video_id>", methods=["GET"])
@@ -81,7 +125,8 @@ def get_video(video_id):
         return jsonify(VideoService.build_access_denied_payload(video, access_context)), 403
 
     VideoService.increment_views(video)
-    return jsonify(video.to_dict(access_context=access_context)), 200
+    viewer_id = current_user.id if current_user.is_authenticated else None
+    return jsonify(video.to_dict(viewer_id=viewer_id, access_context=access_context)), 200
 
 
 @video_bp.route("/<int:video_id>/stats", methods=["GET"])
@@ -150,7 +195,9 @@ def upload_video():
         status = 404 if error == "Creator not found" else 400
         return jsonify({"error": error}), status
 
-    return jsonify(video.to_dict()), 201
+    response_payload = video.to_dict(viewer_id=current_user.id)
+    response_payload["quiz_generation"] = _build_upload_quiz_generation_payload(video)
+    return jsonify(response_payload), 201
 
 
 @video_bp.route("/<int:video_id>", methods=["PUT"])
@@ -178,7 +225,7 @@ def update_video(video_id):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    return jsonify(updated.to_dict()), 200
+    return jsonify(updated.to_dict(viewer_id=current_user.id)), 200
 
 
 @video_bp.route("/<int:video_id>", methods=["DELETE"])

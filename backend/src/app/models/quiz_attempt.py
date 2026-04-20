@@ -21,7 +21,11 @@ class QuizAttempt(db.Model):
     )
 
     user = db.relationship("User", foreign_keys=[user_id])
-    video = db.relationship("Video", foreign_keys=[video_id])
+    video = db.relationship(
+        "Video",
+        foreign_keys=[video_id],
+        backref=db.backref("quiz_attempts", lazy=True, cascade="all, delete-orphan"),
+    )
 
     def to_dict(self, include_answers=False):
         data = {

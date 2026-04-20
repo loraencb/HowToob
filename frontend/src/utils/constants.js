@@ -1,3 +1,10 @@
+export {
+  CATEGORY_OPTIONS,
+  CATEGORIES,
+  PRIMARY_CATEGORIES,
+  SUB_CATEGORIES,
+} from './categoryTaxonomy'
+
 // API
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim()
 
@@ -65,64 +72,6 @@ export const ROLES = {
   CREATOR: 'creator',
   ADMIN: 'admin',
 }
-
-// Two-level category filter data
-export const PRIMARY_CATEGORIES = [
-  { value: 'technology', label: 'Computer Science' },
-  { value: 'science', label: 'Science' },
-  { value: 'fitness', label: 'Fitness' },
-  { value: 'business', label: 'Business' },
-  { value: 'arts', label: 'Arts' },
-]
-
-export const SUB_CATEGORIES = {
-  technology: [
-    { value: 'frontend', label: 'Frontend' },
-    { value: 'backend', label: 'Backend' },
-    { value: 'aiml', label: 'AI/ML' },
-    { value: 'cybersecurity', label: 'Cybersecurity' },
-  ],
-  science: [
-    { value: 'physics', label: 'Physics' },
-    { value: 'chemistry', label: 'Chemistry' },
-    { value: 'biology', label: 'Biology' },
-    { value: 'astronomy', label: 'Astronomy' },
-  ],
-  fitness: [
-    { value: 'weightlifting', label: 'Weightlifting' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'nutrition', label: 'Nutrition' },
-    { value: 'yoga', label: 'Yoga' },
-  ],
-  business: [
-    { value: 'entrepreneurship', label: 'Entrepreneurship' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'leadership', label: 'Leadership' },
-  ],
-  arts: [
-    { value: 'painting', label: 'Painting' },
-    { value: 'digital-art', label: 'Digital Art' },
-    { value: 'design', label: 'Design' },
-    { value: 'photography', label: 'Photography' },
-  ],
-}
-
-// Flat category list used by older parts of the app
-export const CATEGORIES = [
-  { value: 'technology', label: 'Computer Science' },
-  { value: 'science', label: 'Science' },
-  { value: 'arts', label: 'Arts & Crafts' },
-  { value: 'cooking', label: 'Cooking' },
-  { value: 'fitness', label: 'Fitness' },
-  { value: 'business', label: 'Business' },
-  { value: 'language', label: 'Language Learning' },
-  { value: 'diy', label: 'DIY & Home Improvement' },
-  { value: 'math', label: 'Mathematics' },
-  { value: 'music', label: 'Music' },
-  { value: 'photography', label: 'Photography' },
-  { value: 'writing', label: 'Writing' },
-]
 
 // Pagination
 export const PAGE_SIZE = 12

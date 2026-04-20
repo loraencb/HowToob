@@ -140,7 +140,8 @@ export function PlaylistProvider({ children }) {
       setSource('backend')
     } catch (requestError) {
       loadLocalFallback(
-        requestError.message || 'Could not load backend learning paths. Showing local fallback instead.'
+        requestError.message ||
+          'Your learning paths are not fully available right now. Saved paths on this device are still ready.'
       )
     } finally {
       setLoading(false)

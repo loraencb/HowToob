@@ -47,6 +47,28 @@ def upsert_quiz(video_id):
     return jsonify(payload), 200
 
 
+@quiz_bp.route("/<int:video_id>/quiz/generate", methods=["POST"])
+@login_required
+def generate_quiz(video_id):
+    data = request.get_json() or {}
+    overwrite_value = data.get("overwrite", False)
+    overwrite = (
+        overwrite_value is True
+        or str(overwrite_value).strip().lower() in {"1", "true", "yes", "on"}
+    )
+
+    payload, error, status = QuizService.generate_ai_quiz(
+        actor_id=current_user.id,
+        video_id=video_id,
+        question_count=data.get("question_count"),
+        overwrite=overwrite,
+    )
+    if error:
+        return jsonify({"error": error}), status
+
+    return jsonify(payload), status
+
+
 @quiz_bp.route("/<int:video_id>/quiz/submissions", methods=["POST"])
 @login_required
 def submit_quiz(video_id):

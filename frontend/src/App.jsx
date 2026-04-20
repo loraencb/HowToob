@@ -10,7 +10,7 @@ import LoadingSpinner from './components/common/LoadingSpinner'
 // Eager imports (auth pages, small and always needed)
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Home from './pages/Home'
+import Home from './pages/HomeFeed'
 
 // Lazy imports (code-split by route)
 const Watch          = lazy(() => import('./pages/Watch'))

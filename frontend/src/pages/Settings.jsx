@@ -35,7 +35,7 @@ const PREFERENCE_FIELDS = [
   {
     name: 'emailNotifications',
     title: 'Email notification preference',
-    description: 'Stored locally for now because the current backend does not expose a profile update route.',
+    description: 'Saved for this device so your study setup feels consistent each time you return.',
   },
 ]
 
@@ -167,8 +167,7 @@ export default function Settings() {
           <p className={styles.eyebrow}>Settings</p>
           <h1 className={styles.title}>Tune the learning experience</h1>
           <p className={styles.subtitle}>
-            Account identity comes from the backend session, while learning
-            preferences stay explicit and local until profile update routes exist.
+            Adjust the way HowToob feels on this device and keep your learning setup comfortable.
           </p>
         </div>
 
@@ -178,7 +177,7 @@ export default function Settings() {
             <strong className={styles.metaValue}>{getRoleLabel(account.role)}</strong>
           </article>
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Fallback reports</span>
+            <span className={styles.metaLabel}>Saved reports</span>
             <strong className={styles.metaValue}>{pendingReports.length}</strong>
           </article>
         </div>
@@ -196,7 +195,7 @@ export default function Settings() {
           <article className={styles.panel}>
             <div className={styles.panelHeader}>
               <div>
-                <p className={styles.panelEyebrow}>Backend-connected</p>
+                <p className={styles.panelEyebrow}>Account</p>
                 <h2 className={styles.panelTitle}>Account snapshot</h2>
               </div>
             </div>
@@ -217,8 +216,7 @@ export default function Settings() {
             </div>
 
             <p className={styles.panelText}>
-              The current backend exposes session identity, but not a profile update
-              route. These values are intentionally read-only in this build.
+              These account details are shown here for reference and stay read-only on this page.
             </p>
 
             <div className={styles.inlineActions}>
@@ -239,7 +237,7 @@ export default function Settings() {
           <article className={styles.panel}>
             <div className={styles.panelHeader}>
               <div>
-                <p className={styles.panelEyebrow}>Local preferences</p>
+                <p className={styles.panelEyebrow}>Preferences</p>
                 <h2 className={styles.panelTitle}>Learning controls</h2>
               </div>
             </div>
@@ -266,7 +264,7 @@ export default function Settings() {
                 <label className={styles.selectRow}>
                   <span className={styles.preferenceTitle}>Profile visibility preference</span>
                   <span className={styles.preferenceDescription}>
-                    Stored locally until a backend profile settings route exists.
+                    Saved on this device with your other learning preferences.
                   </span>
                   <select
                     name="profileVisibility"
@@ -293,15 +291,13 @@ export default function Settings() {
           <article className={styles.panel}>
             <div className={styles.panelHeader}>
               <div>
-                <p className={styles.panelEyebrow}>Moderation fallback</p>
-                <h2 className={styles.panelTitle}>Local fallback report center</h2>
+                <p className={styles.panelEyebrow}>Reports</p>
+                <h2 className={styles.panelTitle}>Saved report center</h2>
               </div>
             </div>
 
             <p className={styles.panelText}>
-              Watch-page reports now submit to the backend first. Only reports that
-              had to fall back locally appear here, and backend moderation queues are
-              not yet surfaced in settings.
+              Reports saved on this device appear here so you can keep track of them later.
             </p>
 
             {reports.length > 0 ? (
@@ -343,7 +339,7 @@ export default function Settings() {
                       </div>
                     ) : (
                       <p className={styles.reportFootnote}>
-                        Review actions are reserved for admin accounts in this local prototype.
+                        Review actions are available for admin accounts.
                       </p>
                     )}
                   </article>
@@ -351,10 +347,9 @@ export default function Settings() {
               </div>
             ) : (
               <div className={styles.emptyState}>
-                <h3 className={styles.emptyTitle}>No fallback reports yet</h3>
+                <h3 className={styles.emptyTitle}>No saved reports yet</h3>
                 <p className={styles.emptyText}>
-                  If the moderation backend is unavailable and a report falls back to
-                  local storage, it will appear here with a clearly local-only label.
+                  Reports you save from lesson pages will appear here for quick review.
                 </p>
               </div>
             )}
@@ -384,9 +379,9 @@ export default function Settings() {
                 </p>
               </div>
               <div className={styles.infoItem}>
-                <strong className={styles.infoTitle}>Local honesty</strong>
+                <strong className={styles.infoTitle}>Device preferences</strong>
                 <p className={styles.infoText}>
-                  Preferences are saved in this browser instead of being represented as synced backend settings.
+                  Your preferences stay available on this device each time you come back.
                 </p>
               </div>
             </div>

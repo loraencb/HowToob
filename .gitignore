@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environments
 venv/
+.env
 .env/
 .env.*
 
@@ -46,6 +47,8 @@ instance/
 # Temporary files
 *.tmp
 *.swp
+local_tools/
+uploads/
 
 # Node / Frontend
 node_modules/

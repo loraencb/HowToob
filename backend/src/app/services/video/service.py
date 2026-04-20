@@ -4,6 +4,7 @@ from ...extensions import db
 from ...models.subscription import Subscription
 from ...models.video import Video
 from ...models.user import User
+from ...utils.category_taxonomy import normalize_category_value
 
 
 class VideoService:
@@ -14,6 +15,8 @@ class VideoService:
             selectinload(Video.creator),
             selectinload(Video.comments),
             selectinload(Video.likes),
+            selectinload(Video.quiz_definition),
+            selectinload(Video.transcript_cache),
         )
 
     @staticmethod
@@ -35,13 +38,17 @@ class VideoService:
         if normalized_access_tier is None:
             return None, "Access tier must be a non-negative integer"
 
+        normalized_category, category_error = VideoService.normalize_category(category)
+        if category_error:
+            return None, category_error
+
         video = Video(
             title=title,
             description=description,
             file_path=file_path,
             thumbnail_path=thumbnail_path,
             creator_id=creator_id,
-            category=category,
+            category=normalized_category,
             learning_level=learning_level,
             access_tier=normalized_access_tier,
         )
@@ -86,7 +93,7 @@ class VideoService:
         return videos, None
 
     @staticmethod
-    def get_feed(page=1, limit=10, search=None):
+    def get_feed(page=1, limit=10, search=None, viewer_id=None):
         query = VideoService.with_relations(Video.query.filter_by(is_published=True))
 
         if search:
@@ -95,6 +102,7 @@ class VideoService:
                 or_(
                     Video.title.ilike(search_term),
                     Video.description.ilike(search_term),
+                    Video.category.ilike(search_term),
                 )
             )
 
@@ -107,7 +115,7 @@ class VideoService:
             "limit": limit,
             "total": pagination.total,
             "pages": pagination.pages,
-            "results": [video.to_dict() for video in pagination.items],
+            "results": [video.to_dict(viewer_id=viewer_id) for video in pagination.items],
         }
 
     @staticmethod
@@ -187,6 +195,21 @@ class VideoService:
         return normalized
 
     @staticmethod
+    def normalize_category(category):
+        if category is None:
+            return None, None
+
+        raw_category = str(category).strip()
+        if not raw_category:
+            return None, None
+
+        normalized = normalize_category_value(raw_category)
+        if not normalized:
+            return None, "Category must use one of the predefined learning labels"
+
+        return normalized, None
+
+    @staticmethod
     def update_video(
         video,
         title=None,
@@ -204,7 +227,10 @@ class VideoService:
         if thumbnail_path is not None:
             video.thumbnail_path = thumbnail_path
         if category is not None:
-            video.category = category
+            normalized_category, category_error = VideoService.normalize_category(category)
+            if category_error:
+                raise ValueError(category_error)
+            video.category = normalized_category
         if learning_level is not None:
             video.learning_level = learning_level
         if access_tier is not None:

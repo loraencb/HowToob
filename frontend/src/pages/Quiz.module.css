@@ -96,6 +96,13 @@
   min-height: 100%;
 }
 
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 100%;
+}
+
 .lessonThumb {
   width: 168px;
   min-width: 168px;
@@ -134,6 +141,7 @@
 .scoreLabel,
 .panelEyebrow,
 .reviewNumber {
+  display: block;
   color: var(--color-primary-light);
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -146,6 +154,7 @@
 .panelTitle,
 .question,
 .reviewQuestion {
+  display: block;
   color: var(--color-text-light);
 }
 
@@ -185,7 +194,9 @@
 .summaryMiniText,
 .scoreText,
 .progressCopy,
-.reviewAnswer {
+.reviewAnswer,
+.summaryText {
+  display: block;
   color: var(--color-text-muted);
 }
 

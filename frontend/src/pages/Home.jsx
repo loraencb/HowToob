@@ -1,41 +1,44 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { videosAPI } from '../utils/api'
-import { formatViewCount, formatNumericDate, truncate } from '../utils/formatters'
-import { PAGE_SIZE } from '../utils/constants'
+import {
+  formatNumericDate,
+  formatRatingSummary,
+  formatViewCount,
+  truncate,
+} from '../utils/formatters'
+import { PAGE_SIZE, PRIMARY_CATEGORIES } from '../utils/constants'
+import { getCategoryMetadata, matchesCategoryFilter } from '../utils/categoryTaxonomy'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import VideoCard from '../components/common/VideoCard'
 import SkillPathFilter from '../components/common/SkillPathFilter'
 import styles from './Home.module.css'
 
-// Group videos by category so we can build the home sections.
 function groupVideosByCategory(videosList) {
-  const categories = {}
+  const grouped = new Map(
+    PRIMARY_CATEGORIES.map((category) => [
+      category.value,
+      {
+        value: category.value,
+        label: category.label,
+        videos: [],
+      },
+    ])
+  )
 
   videosList.forEach((video) => {
-    const category = video.category
-    if (!category) return
-
-    if (!categories[category]) {
-      categories[category] = []
+    const category = getCategoryMetadata(video.category)
+    if (!category.primaryValue || !grouped.has(category.primaryValue)) {
+      return
     }
 
-    categories[category].push(video)
+    grouped.get(category.primaryValue).videos.push(video)
   })
 
-  Object.keys(categories).forEach((key) => {
-    categories[key].sort((a, b) => (b.views || 0) - (a.views || 0))
-  })
-
-  const filtered = {}
-  Object.keys(categories).forEach((key) => {
-    if (categories[key].length > 0) {
-      filtered[key] = categories[key]
-    }
-  })
-
-  return filtered
+  return PRIMARY_CATEGORIES.map((category) => grouped.get(category.value)).filter(
+    (section) => section.videos.length > 0
+  )
 }
 
 function cleanTitle(title) {
@@ -43,62 +46,18 @@ function cleanTitle(title) {
   return title.replace(/^[^:]+:\s*/, '')
 }
 
-const PLACEHOLDER_TITLES = {
-  'Computer Science': [
-    'Advanced React Patterns',
-    'Fullstack Node.js Guide',
-    'Python Data Science 101',
-    'Mastering CSS Grid',
-    'Docker Basics',
-  ],
-  'Finance & Business': [
-    'Startup Strategies',
-    'Personal Finance Masterclass',
-    'Investing 101',
-    'Building a Business Plan',
-    'Crypto Explained',
-  ],
-  'Arts & Design': [
-    'Digital Illustration Basics',
-    'Color Theory in Practice',
-    'UI/UX Principles',
-    'Typography Masterclass',
-    'Logo Design Workshop',
-  ],
-  'Fitness & Wellness': [
-    '30-Minute Body HIIT',
-    'Yoga Flow for Flexibility',
-    'Nutrition and Meal Prep',
-    'Strength Training Basics',
-    'Mindful Meditation',
-  ],
-}
+function getLessonBadgeLabel(video) {
+  const category = getCategoryMetadata(video.category)
 
-const FALLBACK_TITLES = [
-  'Beginner Fundamentals Guide',
-  'Advanced Techniques Masterclass',
-  'Tips and Tricks for Success',
-  'Professional Series Workshop',
-  'Essential Skills Training',
-]
+  if (category.label && category.primaryLabel && category.label !== category.primaryLabel) {
+    return category.label
+  }
 
-const TIER_TWO_TITLES = new Set([
-  'Mastering CSS Grid',
-  'Strength Training',
-  'Strength Training Basics',
-  'Building a Business Plan',
-  'Typography Masterclass',
-])
+  if (category.primaryLabel) {
+    return category.primaryLabel
+  }
 
-const EXPLORE_MORE_VIEW_COUNTS = [118, 164, 207, 243, 319, 362, 418, 487]
-
-function getPlaceholderTitle(categoryName, index) {
-  const titles = PLACEHOLDER_TITLES[categoryName] || FALLBACK_TITLES
-  return titles[index % titles.length]
-}
-
-function getCardBadgeLabel(title, defaultLabel) {
-  return TIER_TWO_TITLES.has(cleanTitle(title)) ? 'Tier 2' : defaultLabel
+  return 'Lesson'
 }
 
 function PlayOverlay() {
@@ -113,12 +72,9 @@ function PlayOverlay() {
   )
 }
 
-function ThumbnailPlaceholder({ primary = false }) {
+function ThumbnailFallback({ primary = false }) {
   return (
-    <div
-      className={styles.bentoGhost}
-      style={{ height: '100%', width: '100%', border: 'none' }}
-    >
+    <div className={styles.bentoPlaceholder} aria-hidden="true">
       <div className={styles.bentoPlaceholder}>
         <svg
           width={primary ? 48 : 32}
@@ -131,7 +87,6 @@ function ThumbnailPlaceholder({ primary = false }) {
           <polygon points="5 3 19 12 5 21 5 3" />
         </svg>
       </div>
-      <div className={styles.bentoGhostLabel}>Coming soon</div>
     </div>
   )
 }
@@ -142,6 +97,49 @@ function normalizeFeedResponse(data) {
   if (Array.isArray(data?.videos)) return data.videos
   if (Array.isArray(data?.items)) return data.items
   return []
+}
+
+function BentoLessonCard({ video, primary = false }) {
+  if (!video) return null
+
+  const ratingCount = video.rating_count ?? video.like_count ?? 0
+  const createdAt = video.created_at || null
+
+  return (
+    <article
+      className={`${styles.bentoCard} ${primary ? styles.bentoPrimary : styles.bentoSecondary}`}
+    >
+      <div className={styles.bentoLabel}>{getLessonBadgeLabel(video)}</div>
+      <Link to={`/watch/${video.id}`} className={styles.bentoLink}>
+        <div className={styles.bentoThumbnail}>
+          {video.thumbnail_url ? (
+            <>
+              <img src={video.thumbnail_url} alt={video.title} />
+              <PlayOverlay />
+            </>
+          ) : (
+            <ThumbnailFallback primary={primary} />
+          )}
+        </div>
+
+        <div className={styles.bentoTitle}>
+          {truncate(cleanTitle(video.title || 'Untitled lesson'), primary ? 80 : 60)}
+        </div>
+
+        <div className={styles.bentoMeta}>
+          <span>{formatViewCount(video.views || 0)} views</span>
+          <span className={styles.bentoDot}>|</span>
+          <span>{formatRatingSummary(video.average_rating, ratingCount)}</span>
+          {createdAt ? (
+            <>
+              <span className={styles.bentoDot}>|</span>
+              <span>{formatNumericDate(createdAt)}</span>
+            </>
+          ) : null}
+        </div>
+      </Link>
+    </article>
+  )
 }
 
 export default function Home() {
@@ -190,41 +188,43 @@ export default function Home() {
     fetchVideos(1, true)
   }, [fetchVideos])
 
+  const activeCategoryMeta = useMemo(
+    () => getCategoryMetadata(activeCategory),
+    [activeCategory]
+  )
+
   const filteredVideos = useMemo(() => {
     if (!activeCategory) return videos
-    return videos.filter((video) => video.category === activeCategory)
+    return videos.filter((video) => matchesCategoryFilter(video.category, activeCategory))
   }, [videos, activeCategory])
 
+  const featuredVideos = useMemo(() => filteredVideos.slice(0, 5), [filteredVideos])
+
+  const remainingVideos = useMemo(() => filteredVideos.slice(5), [filteredVideos])
+
   const categorySections = useMemo(() => {
-    let sections = {}
-
-    if (filteredVideos.length > 5) {
-      sections = groupVideosByCategory(filteredVideos.slice(5))
+    if (activeCategory) {
+      return []
     }
 
-    const placeholderCategories = [
-      'Computer Science',
-      'Finance & Business',
-      'Arts & Design',
-      'Fitness & Wellness',
-    ]
+    return groupVideosByCategory(remainingVideos)
+  }, [activeCategory, remainingVideos])
 
-    for (const cat of placeholderCategories) {
-      if (!sections[cat] && Object.keys(sections).length < 4) {
-        sections[cat] = []
-      }
-    }
+  const homeHeading = activeCategory
+    ? activeCategoryMeta.pathLabel || activeCategoryMeta.label || 'Selected learning path'
+    : 'Structured learning feed'
 
-    return sections
-  }, [filteredVideos])
+  const homeDescription = activeCategory
+    ? `Showing ${filteredVideos.length} lesson${
+        filteredVideos.length === 1 ? '' : 's'
+      } in this selected path. Creators assign these labels directly when they publish.`
+    : 'Browse the lesson library through creator-assigned categories and curated learning shelves.'
 
   function handleLoadMore() {
     if (!loadingMore && hasMore) {
       fetchVideos(page + 1)
     }
   }
-
-  const featuredVideos = filteredVideos
 
   return (
     <div className={styles.page}>
@@ -277,6 +277,8 @@ export default function Home() {
                         <div className={styles.bentoMeta}>
                           <span>{formatViewCount(v.views || 0)} views</span>
                           <span className={styles.bentoDot}>·</span>
+                          <span>{formatRatingSummary(v.average_rating, v.rating_count ?? v.like_count)}</span>
+                          <span>|</span>
                           <span>
                             {formatNumericDate(v.created_at || new Date())}
                           </span>
@@ -402,6 +404,8 @@ export default function Home() {
                             <div className={styles.bentoMeta}>
                               <span>{formatViewCount(v.views || 0)} views</span>
                               <span className={styles.bentoDot}>·</span>
+                              <span>{formatRatingSummary(v.average_rating, v.rating_count ?? v.like_count)}</span>
+                              <span>|</span>
                               <span>
                                 {formatNumericDate(v.created_at || new Date().toISOString())}
                               </span>

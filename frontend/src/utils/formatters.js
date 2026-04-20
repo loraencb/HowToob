@@ -15,6 +15,38 @@ export function formatViewCount(count) {
 }
 
 /**
+ * Format a like count with K/M abbreviations.
+ */
+export function formatLikeCount(count) {
+  return formatViewCount(count)
+}
+
+/**
+ * Format a rating count with K/M abbreviations.
+ */
+export function formatRatingCount(count) {
+  return formatViewCount(count)
+}
+
+/**
+ * Format an average star rating.
+ */
+export function formatAverageRating(rating) {
+  const normalized = Number(rating || 0)
+  if (!normalized) return 'No ratings yet'
+  return `${normalized.toFixed(1)}★`
+}
+
+/**
+ * Format rating summary copy for lesson cards and metadata rows.
+ */
+export function formatRatingSummary(averageRating, ratingCount) {
+  const normalizedCount = Number(ratingCount || 0)
+  if (!normalizedCount) return 'No ratings yet'
+  return `${formatAverageRating(averageRating)} (${formatRatingCount(normalizedCount)})`
+}
+
+/**
  * Format seconds into a human-readable duration (e.g. 3661 → "1:01:01")
  */
 export function formatDuration(seconds) {

@@ -1,3 +1,5 @@
+import { getCategoryMetadata } from './categoryTaxonomy'
+
 export function getCreatorName(video, fallback = 'HowToob creator') {
   return (
     video?.creator?.display_name ||
@@ -22,7 +24,37 @@ export function getCreatorProfileSlug(video) {
 }
 
 export function getCategoryLabel(video, fallback = 'Not tagged yet') {
-  return video?.category || video?.subject || video?.topic || fallback
+  const metadata = getCategoryMetadata(
+    video?.category ||
+      video?.category_label ||
+      video?.subject ||
+      video?.topic ||
+      null
+  )
+
+  return metadata.label || fallback
+}
+
+export function getCategoryPrimaryLabel(video, fallback = 'General learning') {
+  const metadata = getCategoryMetadata(
+    video?.category ||
+      video?.category_primary ||
+      video?.category_label ||
+      null
+  )
+
+  return metadata.primaryLabel || metadata.label || fallback
+}
+
+export function getCategoryPathLabel(video, fallback = 'Not tagged yet') {
+  const metadata = getCategoryMetadata(
+    video?.category ||
+      video?.category_path ||
+      video?.category_label ||
+      null
+  )
+
+  return metadata.pathLabel || fallback
 }
 
 export function getTierLevel(video) {

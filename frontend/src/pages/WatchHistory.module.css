@@ -1,0 +1,390 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+}
+
+.hero,
+.statCard,
+.section,
+.historyCard,
+.compactCard,
+.emptyState {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%),
+    var(--color-bg-secondary);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+.hero {
+  padding: var(--space-2xl);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  align-items: flex-start;
+  background: var(--gradient-panel);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 760px;
+}
+
+.badgeRow,
+.heroActions,
+.cardActions,
+.cardLabels,
+.pathList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.title,
+.sectionTitle,
+.emptyTitle,
+.cardTitle,
+.compactTitle {
+  margin: 0;
+  color: var(--color-text-light);
+}
+
+.title {
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.subtitle,
+.timestamp,
+.cardNote,
+.emptyText,
+.sectionHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.loadingWrap {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3xl) 0;
+}
+
+.inlineError {
+  margin: 0;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+
+.statCard,
+.section,
+.emptyState {
+  padding: var(--space-xl);
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.statLabel,
+.sectionEyebrow {
+  color: var(--color-primary-light);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.statValue {
+  color: var(--color-text-light);
+  font-family: var(--font-family-heading);
+  font-size: clamp(1.9rem, 2vw, 2.6rem);
+  line-height: 1;
+}
+
+.statHelper {
+  color: var(--color-text-muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: flex-end;
+}
+
+.cardList,
+.cardGrid {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.cardList {
+  grid-template-columns: 1fr;
+}
+
+.cardGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.historyCard {
+  padding: var(--space-lg);
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+.thumbnailLink {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(14, 33, 56, 0.64);
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnailPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.cardBody,
+.compactCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.compactCard {
+  padding: var(--space-lg);
+}
+
+.cardHeader,
+.compactHeader,
+.metaRow,
+.starRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.9rem;
+  align-items: center;
+}
+
+.cardHeader {
+  justify-content: space-between;
+}
+
+.cardTitle,
+.compactTitle {
+  text-decoration: none;
+  font-size: clamp(1.1rem, 1.7vw, 1.35rem);
+}
+
+.cardTitle:hover,
+.compactTitle:hover,
+.creatorLink:hover,
+.pathPill:hover,
+.primaryLink:hover,
+.secondaryLink:hover {
+  color: var(--color-primary-light);
+}
+
+.metaRow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.creatorLink,
+.pathPill,
+.primaryLink,
+.secondaryLink {
+  text-decoration: none;
+}
+
+.creatorLink {
+  color: var(--color-text-light);
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.progressTrack {
+  flex: 1;
+  height: 0.55rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-primary-soft);
+  transition: width var(--transition-normal);
+}
+
+.progressCopy,
+.ratingCopy,
+.pathOverflow {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.starRow {
+  gap: 0.35rem;
+}
+
+.starFilled,
+.starEmpty {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.starFilled {
+  color: var(--color-warning);
+}
+
+.starEmpty {
+  color: rgba(255, 255, 255, 0.16);
+}
+
+.pathPill {
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-full);
+  background: rgba(var(--color-primary-rgb), 0.14);
+  color: var(--color-text-light);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+  font-size: var(--font-size-sm);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.primaryLink,
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.8rem;
+  padding: 0.8rem 1.15rem;
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-semibold);
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.primaryLink {
+  background: var(--gradient-primary);
+  color: #fff;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.5);
+  box-shadow: var(--shadow-sm);
+}
+
+.secondaryLink {
+  background: rgba(14, 33, 56, 0.56);
+  color: var(--color-text-light);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.primaryLink:hover,
+.secondaryLink:hover,
+.thumbnailLink:hover,
+.thumbnailLink:focus-visible {
+  transform: translateY(-1px);
+}
+
+.primaryLink:focus-visible,
+.secondaryLink:focus-visible,
+.cardTitle:focus-visible,
+.compactTitle:focus-visible,
+.creatorLink:focus-visible,
+.pathPill:focus-visible,
+.thumbnailLink:focus-visible {
+  outline: 2px solid rgba(var(--color-primary-rgb), 0.8);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1080px) {
+  .statsGrid,
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .historyCard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    gap: var(--space-xl);
+  }
+
+  .hero,
+  .statCard,
+  .section,
+  .historyCard,
+  .compactCard,
+  .emptyState {
+    padding: var(--space-lg);
+  }
+
+  .hero,
+  .sectionHeader,
+  .cardHeader,
+  .progressRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .heroActions,
+  .cardActions {
+    width: 100%;
+  }
+
+  .heroActions a,
+  .cardActions a {
+    width: 100%;
+  }
+
+  .progressTrack {
+    width: 100%;
+  }
+}

@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       } else {
         setAuthError(
           error?.message ||
-            'Could not verify your HowToob session from this device. Check the backend connection, cookie settings, and LAN origin.'
+            'Could not verify your HowToob session on this device. Check your connection and try again.'
         )
       }
     } finally {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
       if (error?.status !== 401) {
         setAuthError(
           error?.message ||
-            'Login could not be completed from this device. Check the backend connection and session cookie settings.'
+            'Login could not be completed on this device. Check your connection and try again.'
         )
       }
       throw error

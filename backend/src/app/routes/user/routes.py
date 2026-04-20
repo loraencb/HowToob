@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
+from flask_login import current_user, login_required
 from ...services.social import SocialService
 from ...services.user import UserService
 
@@ -22,6 +23,21 @@ def get_user_subscriptions(user_id):
         }
         for sub in subscriptions
     ]), 200
+
+
+@user_bp.route("/me/ratings", methods=["GET"])
+@login_required
+def get_my_ratings():
+    limit = request.args.get("limit", type=int)
+    payload, error = SocialService.get_user_rated_videos(
+        user_id=current_user.id,
+        limit=limit,
+    )
+
+    if error:
+        return jsonify({"error": error}), 404
+
+    return jsonify(payload), 200
 
 
 @user_bp.route("/profile/<identifier>", methods=["GET"])

@@ -9,8 +9,8 @@ function buildUrl(path) {
 function buildNetworkError(path, originalError) {
   const usingDirectBackend = Boolean(RESOLVED_API_BASE)
   const message = usingDirectBackend
-    ? `Could not reach the HowToob backend at ${RESOLVED_API_BASE}. Make sure the host machine is running the backend, the LAN IP is correct, and CORS allows this frontend origin.`
-    : 'Could not reach the HowToob backend through the Vite dev server. Make sure the backend is running on port 5000 on the host machine, or set VITE_API_BASE_URL to the LAN backend URL.'
+    ? `Could not reach HowToob at ${RESOLVED_API_BASE}. Make sure the host machine is running and the connection address is correct.`
+    : 'Could not reach HowToob right now. Make sure the host machine is running and try again.'
 
   const error = new Error(message)
   error.name = 'APIConnectionError'
@@ -33,8 +33,8 @@ function normalizeNonJsonErrorBody(response, text) {
     return {
       error:
         response.status >= 500
-          ? 'The backend returned an HTML error page. Check the backend console or Flask logs for the real stack trace.'
-          : `The backend returned an unexpected HTML response (${response.status}).`,
+          ? 'The service returned an unexpected error page. Please try again in a moment.'
+          : `The service returned an unexpected response (${response.status}).`,
       details: {
         contentType: response.headers.get('content-type') || '',
         responseType: 'html',
@@ -48,9 +48,8 @@ function normalizeNonJsonErrorBody(response, text) {
 /**
  * API utility - thin wrappers around fetch() for the HowToob Flask backend.
  * All requests include credentials (session cookies for Flask-Login).
+ * When VITE_API_BASE_URL is empty, Vite proxying handles local dev requests.
  */
-
-const API_BASE = '' // Vite proxy handles /auth, /videos, /social, /users → localhost:5000
 
 async function request(method, path, body = null, isFormData = false) {
   const options = {
@@ -185,8 +184,14 @@ export const socialAPI = {
       parent_id: parentId,
     }),
 
+  toggleCommentLike: (commentId) =>
+    request('POST', `/social/comments/${commentId}/likes/toggle`),
+
   toggleLike: (videoId) =>
     request('POST', '/social/likes/toggle', { video_id: videoId }),
+
+  rateVideo: (videoId, rating) =>
+    request('POST', '/social/ratings', { video_id: videoId, rating }),
 
   subscribe: (creatorId, tierLevel = 0) =>
     request('POST', '/social/subscribe', {
@@ -210,6 +215,9 @@ export const socialAPI = {
 export const usersAPI = {
   getSubscriptions: (userId) =>
     request('GET', `/users/${userId}/subscriptions`),
+
+  getMyRatings: (limit = null) =>
+    request('GET', `/users/me/ratings${buildQuery({ limit })}`),
 
   getProfile: (identifier) =>
     request('GET', `/users/profile/${encodeURIComponent(identifier)}`),
@@ -276,6 +284,12 @@ export const playlistsAPI = {
 export const quizAPI = {
   getByVideoId: (videoId) =>
     request('GET', `/videos/${videoId}/quiz`),
+
+  generate: (videoId, { questionCount = 5, overwrite = false } = {}) =>
+    request('POST', `/videos/${videoId}/quiz/generate`, {
+      question_count: questionCount,
+      overwrite,
+    }),
 
   submit: (videoId, answers) =>
     request('POST', `/videos/${videoId}/quiz/submissions`, { answers }),

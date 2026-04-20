@@ -6,11 +6,15 @@ import ErrorMessage from '../components/common/ErrorMessage'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import { usePlaylists } from '../context/PlaylistContext'
 import { useProgress } from '../context/ProgressContext'
-import { quizAPI, videosAPI } from '../utils/api'
+import { quizAPI } from '../utils/api'
 import { QUIZ_PASS_SCORE } from '../utils/constants'
 import { getAccessMetadata, getCategoryLabel, getCreatorName } from '../utils/lessonMetadata'
-import { buildPrototypeQuiz } from '../utils/quizMvp'
-import { formatNumericDate, formatViewCount, truncate } from '../utils/formatters'
+import {
+  formatNumericDate,
+  formatRatingSummary,
+  formatViewCount,
+  truncate,
+} from '../utils/formatters'
 import styles from './Quiz.module.css'
 
 function normalizeVideoResponse(data) {
@@ -25,6 +29,9 @@ function normalizeVideoResponse(data) {
     thumbnail_url: raw.thumbnail_url || raw.thumbnail || '',
     created_at: raw.created_at || null,
     views: raw.views || 0,
+    like_count: raw.like_count || 0,
+    rating_count: raw.rating_count ?? raw.like_count ?? 0,
+    average_rating: raw.average_rating ?? 0,
     category: raw.category || raw.subject || raw.topic || '',
     creator_id: raw.creator_id ?? raw.creator?.id ?? null,
     author_name:
@@ -33,40 +40,6 @@ function normalizeVideoResponse(data) {
       raw.creator?.username ||
       (raw.creator_id ? `Creator #${raw.creator_id}` : 'HowToob creator'),
     subscription: raw.subscription || null,
-  }
-}
-
-function buildLocalResult(questions, selectedAnswers, passScore) {
-  const questionResults = questions.map((question) => {
-    const selectedIndex = selectedAnswers[question.id]
-    const correctIndex = question.correctIndex
-
-    return {
-      question_id: question.id,
-      question: question.question,
-      selected_index: selectedIndex,
-      correct_index: correctIndex,
-      correct: selectedIndex === correctIndex,
-      explanation: question.explanation,
-    }
-  })
-
-  const correctCount = questionResults.filter((result) => result.correct).length
-  const questionCount = questionResults.length
-  const score = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0
-  const passed = score >= passScore
-
-  return {
-    submitted_at: new Date().toISOString(),
-    summary: {
-      score,
-      passed,
-      question_count: questionCount,
-      correct_count: correctCount,
-      incorrect_count: Math.max(0, questionCount - correctCount),
-      pass_score: passScore,
-    },
-    question_results: questionResults,
   }
 }
 
@@ -83,7 +56,6 @@ export default function Quiz() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [fallbackNotice, setFallbackNotice] = useState('')
   const [accessDenied, setAccessDenied] = useState(null)
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState({})
@@ -106,9 +78,9 @@ export default function Quiz() {
       ? activePlaylist.items[currentPlaylistIndex + 1] || null
       : null
 
-  const lessonProgress = getVideoProgress(videoId)
   const storedAttempt = getQuizScore(videoId)
   const previousAttempt = latestAttempt || storedAttempt
+  const lessonProgress = getVideoProgress(videoId)
 
   useEffect(() => {
     if (!activePlaylistId) return
@@ -124,7 +96,6 @@ export default function Quiz() {
     async function loadLesson() {
       setLoading(true)
       setError('')
-      setFallbackNotice('')
       setAccessDenied(null)
       setSubmitted(false)
       setSubmitting(false)
@@ -165,54 +136,10 @@ export default function Quiz() {
           setLoading(false)
           return
         }
-
-        try {
-          const fallbackData = await videosAPI.getById(videoId)
-          if (!active) return
-
-          const normalized = normalizeVideoResponse(fallbackData)
-          if (!normalized) {
-            throw new Error('Could not load this lesson for quiz fallback.')
-          }
-
-          const fallbackQuestions = buildPrototypeQuiz(normalized, {
-            activePlaylist,
-            lessonProgress,
-          })
-
-          setVideo(normalized)
-          setQuiz({
-            mode: 'prototype',
-            source: 'local_fallback',
-            title: `${normalized.title} knowledge check`,
-            description:
-              'Backend quiz delivery is unavailable for this lesson, so HowToob is using a local prototype fallback on this device.',
-            question_count: fallbackQuestions.length,
-            pass_score: QUIZ_PASS_SCORE,
-            questions: fallbackQuestions,
-          })
-          setLatestAttempt(null)
-          setFallbackNotice(
-            'The quiz service could not be loaded from the backend, so this lesson is using a local prototype fallback.'
-          )
-        } catch (fallbackError) {
-          if (!active) return
-
-          if (fallbackError?.code === 'ACCESS_DENIED') {
-            setAccessDenied(fallbackError)
-            setError('')
-          } else {
-            setError(
-              fallbackError.message ||
-                requestError.message ||
-                'Quiz context could not be loaded.'
-            )
-          }
-
-          setVideo(null)
-          setQuiz(null)
-          setLatestAttempt(null)
-        }
+        setError(requestError.message || 'Quiz context could not be loaded.')
+        setVideo(null)
+        setQuiz(null)
+        setLatestAttempt(null)
       } finally {
         if (active) {
           setLoading(false)
@@ -228,8 +155,6 @@ export default function Quiz() {
   }, [
     activePlaylist?.id,
     activePlaylist?.updatedAt,
-    lessonProgress.completed,
-    lessonProgress.percent,
     saveQuizScore,
     videoId,
   ])
@@ -254,14 +179,7 @@ export default function Quiz() {
 
   const passScore = Number(quiz?.pass_score || QUIZ_PASS_SCORE)
   const accessMetadata = getAccessMetadata(video)
-  const localResult = useMemo(
-    () =>
-      submitted && quiz?.source === 'local_fallback'
-        ? buildLocalResult(questions, selectedAnswers, passScore)
-        : null,
-    [passScore, questions, quiz?.source, selectedAnswers, submitted]
-  )
-  const activeResult = result || localResult
+  const activeResult = result
   const score = Math.round(activeResult?.summary?.score || 0)
   const passed = Boolean(activeResult?.summary?.passed)
   const reviewItems = useMemo(
@@ -316,18 +234,6 @@ export default function Quiz() {
     if (!currentQuestion) return
 
     setSubmitError('')
-
-    if (quiz?.source === 'local_fallback') {
-      const fallbackResult = buildLocalResult(questions, selectedAnswers, passScore)
-      setResult(fallbackResult)
-      setSubmitted(true)
-      saveQuizScore(videoId, fallbackResult.summary.score, {
-        submittedAt: fallbackResult.submitted_at,
-        source: 'local',
-        passed: fallbackResult.summary.passed,
-      })
-      return
-    }
 
     setSubmitting(true)
 
@@ -404,7 +310,7 @@ export default function Quiz() {
           </Badge>
           <h1 className={styles.emptyTitle}>Quiz unavailable for this lesson</h1>
           <p className={styles.emptyText}>
-            This lesson could not be loaded well enough to show a quiz or fallback quiz.
+            This lesson could not be loaded well enough to show a quiz right now.
           </p>
           <div className={styles.emptyActions}>
             <Button variant="primary" onClick={() => navigate(lessonHref)}>
@@ -425,14 +331,10 @@ export default function Quiz() {
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <Badge variant="info" size="md">
-              {quiz.source === 'local_fallback' ? 'Local fallback quiz' : 'Backend quiz result'}
+              Quiz result
             </Badge>
             <h1 className={styles.title}>Quiz summary for {video.title}</h1>
-            <p className={styles.subtitle}>
-              {quiz.source === 'local_fallback'
-                ? 'This result is stored locally because the backend quiz service was unavailable for this lesson.'
-                : 'This result comes from the backend quiz submission endpoint and is saved with your lesson history.'}
-            </p>
+            <p className={styles.subtitle}>Your score has been saved so you can review it later.</p>
           </div>
 
           <div className={styles.scorePanel}>
@@ -490,11 +392,7 @@ export default function Quiz() {
           <div className={styles.panelHeader}>
             <div>
               <p className={styles.panelEyebrow}>Answer review</p>
-              <h2 className={styles.panelTitle}>
-                {quiz.source === 'local_fallback'
-                  ? 'Prototype question breakdown'
-                  : 'Backend question breakdown'}
-              </h2>
+              <h2 className={styles.panelTitle}>Question breakdown</h2>
             </div>
           </div>
 
@@ -523,7 +421,7 @@ export default function Quiz() {
 
           <div className={styles.resultActions}>
             <Button variant="secondary" onClick={handleReset}>
-              {quiz.source === 'local_fallback' ? 'Retake fallback quiz' : 'Retake quiz'}
+              Retake quiz
             </Button>
             <Button variant="primary" onClick={() => navigate(lessonHref)}>
               Back to lesson
@@ -545,11 +443,7 @@ export default function Quiz() {
         <div className={styles.heroCopy}>
           <div className={styles.badgeRow}>
             <Badge variant="info" size="md">
-              {quiz.source === 'local_fallback'
-                ? 'Local fallback quiz'
-                : quiz.mode === 'static'
-                  ? 'Backend quiz'
-                  : 'Backend prototype quiz'}
+              {quiz.mode === 'static' ? 'Lesson quiz' : 'Knowledge check'}
             </Badge>
             {accessMetadata.tierLevel > 0 ? (
               <Badge variant="warning" size="md">
@@ -569,11 +463,9 @@ export default function Quiz() {
           <h1 className={styles.title}>
             {truncate(quiz.title || `Quiz for ${video.title}`, 72)}
           </h1>
-          <p className={styles.subtitle}>
-            {quiz.source === 'local_fallback'
-              ? 'The backend quiz service could not be loaded, so this lesson is using a local prototype fallback.'
-              : quiz.description || 'This quiz is delivered from the backend lesson quiz contract.'}
-          </p>
+            <p className={styles.subtitle}>
+              {quiz.description || 'Check what you understood before moving on.'}
+            </p>
         </div>
 
         <div className={styles.heroActions}>
@@ -606,15 +498,16 @@ export default function Quiz() {
             <p className={styles.contextText}>
               {video.description
                 ? truncate(video.description, 150)
-                : 'No lesson description is available, so quiz context leans on title and platform metadata.'}
+                : 'No lesson description is available yet.'}
             </p>
             <div className={styles.contextMeta}>
               <span>{getCategoryLabel(video)}</span>
               <span>{getCreatorName(video)}</span>
               <span>{formatViewCount(video.views)} views</span>
+              <span>{formatRatingSummary(video.average_rating, video.rating_count)}</span>
               {video.created_at ? <span>{formatNumericDate(video.created_at)}</span> : null}
             </div>
-            <p className={styles.contextNote}>{fallbackNotice || accessMetadata.note}</p>
+            <p className={styles.contextNote}>{accessMetadata.note}</p>
           </div>
         </article>
 
@@ -631,9 +524,7 @@ export default function Quiz() {
               <strong className={styles.summaryMiniValue}>
                 {previousAttempt ? `${previousAttempt.score}%` : '--'}
               </strong>
-              <span className={styles.summaryMiniText}>
-                {quiz.source === 'local_fallback' ? 'Previous local score' : 'Latest saved attempt'}
-              </span>
+              <span className={styles.summaryMiniText}>Latest saved result</span>
             </div>
             <div className={styles.summaryMiniItem}>
               <strong className={styles.summaryMiniValue}>
@@ -659,7 +550,7 @@ export default function Quiz() {
         <div className={styles.progressHeader}>
           <div>
             <p className={styles.panelEyebrow}>
-              {quiz.source === 'local_fallback' ? 'Prototype questions' : 'Quiz questions'}
+              Quiz questions
             </p>
             <h2 className={styles.panelTitle}>
               Question {questions.length > 0 ? currentIdx + 1 : 0} of {questions.length}
@@ -739,11 +630,7 @@ export default function Quiz() {
               }
               onClick={handleSubmit}
             >
-              {submitting
-                ? 'Submitting...'
-                : quiz.source === 'local_fallback'
-                  ? 'Submit fallback quiz'
-                  : 'Submit quiz'}
+              {submitting ? 'Submitting...' : 'Submit quiz'}
             </Button>
           )}
         </div>

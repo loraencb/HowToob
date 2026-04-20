@@ -15,7 +15,10 @@ class PlaylistVideo(db.Model):
         nullable=False,
     )
 
-    video = db.relationship("Video")
+    video = db.relationship(
+        "Video",
+        backref=db.backref("playlist_entries", lazy=True, cascade="all, delete-orphan"),
+    )
 
     __table_args__ = (
         db.UniqueConstraint("playlist_id", "video_id", name="unique_playlist_video"),

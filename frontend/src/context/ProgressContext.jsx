@@ -11,13 +11,10 @@ import { COMPLETION_THRESHOLD, STORAGE_KEYS } from '../utils/constants'
 import { progressAPI, videosAPI } from '../utils/api'
 
 /**
- * ProgressContext - backend-aware progress store for the learning experience.
+ * ProgressContext stores lesson progress keyed by videoId.
  *
- * Progress is keyed by videoId and stored as:
+ * Shape:
  *   { watchedSeconds, durationSeconds, percent, completed, lastUpdated }
- *
- * The shape stays stable for the frontend pages, while the provider prefers
- * real backend progress data and falls back to local storage if needed.
  */
 
 const ProgressContext = createContext(null)
@@ -265,7 +262,8 @@ export function ProgressProvider({ children }) {
       setBackendProgress({})
       setProgressSource('local')
       setProgressError(
-        requestError.message || 'Could not load backend progress. Local fallback is active.'
+        requestError.message ||
+          'Progress could not be refreshed right now. Your recent activity on this device is still available.'
       )
     } finally {
       setProgressLoaded(true)
@@ -309,7 +307,8 @@ export function ProgressProvider({ children }) {
         return backendEntry
       } catch (requestError) {
         setProgressError(
-          requestError.message || 'Progress sync failed, so local fallback remains active.'
+          requestError.message ||
+            'Progress could not be saved right now. Your latest activity is still kept on this device.'
         )
         return optimisticEntry
       }

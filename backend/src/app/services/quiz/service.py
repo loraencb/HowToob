@@ -3,72 +3,14 @@ from ...models.progress import Progress
 from ...models.quiz_attempt import QuizAttempt
 from ...models.quiz_definition import QuizDefinition
 from ...models.user import User
+from ...utils.category_taxonomy import get_category_metadata
 from ..video import VideoService
+from .ai_generation import OpenAIQuizGenerator, QuizGenerationError
 
 QUIZ_PASS_SCORE = 70.0
 
 
 class QuizService:
-    @staticmethod
-    def _build_generated_questions(video, progress_entry=None):
-        if not video:
-            return []
-
-        questions = [
-            {
-                "id": "topic",
-                "question": "Which topic best matches this lesson?",
-                "options": [
-                    video.category or "General learning",
-                    "Platform moderation",
-                    "Subscription billing only",
-                    "Offline-only study",
-                ],
-                "correct_index": 0,
-                "explanation": "The topic answer uses the lesson metadata currently attached to this video.",
-            },
-            {
-                "id": "creator",
-                "question": "Who published this lesson?",
-                "options": [
-                    video.creator.username if video.creator else "HowToob creator",
-                    "Anonymous moderator",
-                    "Playlist bot",
-                    "System admin",
-                ],
-                "correct_index": 0,
-                "explanation": "Creator identity comes directly from the lesson owner on the backend.",
-            },
-            {
-                "id": "access",
-                "question": "What access metadata is currently attached to this lesson?",
-                "options": [
-                    "Standard access" if not video.access_tier else f"Tier {video.access_tier} access",
-                    "Locked by billing enforcement",
-                    "Admin-only lesson",
-                    "No access information exists",
-                ],
-                "correct_index": 0,
-                "explanation": "The backend now exposes and enforces lesson tier metadata on watch flows.",
-            },
-        ]
-
-        if progress_entry and progress_entry.percent_complete > 0:
-            questions.append({
-                "id": "progress",
-                "question": "What learning state already exists for this lesson?",
-                "options": [
-                    f"{round(progress_entry.percent_complete)}% watched",
-                    "No progress has started",
-                    "It is already graded by a backend certificate service",
-                    "It can only be tracked by creators",
-                ],
-                "correct_index": 0,
-                "explanation": "The answer reflects the current stored progress entry for this lesson.",
-            })
-
-        return questions
-
     @staticmethod
     def _normalize_question(question, index):
         question_text = str(question.get("question", "")).strip()
@@ -142,12 +84,7 @@ class QuizService:
                 "questions": definition.questions,
             }
 
-        return {
-            "mode": "prototype",
-            "title": f"{video.title} knowledge check",
-            "description": "This lesson uses a backend prototype quiz contract until full quiz authoring is available.",
-            "questions": QuizService._build_generated_questions(video, progress_entry),
-        }
+        return None
 
     @staticmethod
     def _serialize_public_questions(questions):
@@ -249,6 +186,86 @@ class QuizService:
         }, None
 
     @staticmethod
+    def generate_ai_quiz(actor_id, video_id, question_count=None, overwrite=False):
+        user = db.session.get(User, actor_id)
+        if not user:
+            return None, "User not found", 404
+
+        video = VideoService.get_video_by_id(video_id)
+        if not video:
+            return None, "Video not found", 404
+
+        if user.role != "admin" and video.creator_id != actor_id:
+            return None, "You can only manage quizzes for your own videos", 403
+
+        existing_definition = QuizDefinition.query.filter_by(video_id=video.id).first()
+        if existing_definition and existing_definition.questions and not overwrite:
+            return (
+                None,
+                "Quiz definition already exists for this lesson. Pass overwrite=true to replace it.",
+                409,
+            )
+
+        try:
+            generated_payload = OpenAIQuizGenerator.generate_quiz_definition(
+                video=video,
+                question_count=question_count,
+            )
+        except QuizGenerationError as exc:
+            return None, str(exc), exc.status_code
+
+        normalized_questions, error = QuizService._normalize_questions(
+            generated_payload.get("questions")
+        )
+        if error:
+            return None, error, 502
+
+        requested_count = generated_payload.get("question_count_requested")
+        if requested_count and len(normalized_questions) != int(requested_count):
+            return (
+                None,
+                f"AI quiz generation returned {len(normalized_questions)} questions instead of the requested {requested_count}.",
+                502,
+            )
+
+        definition = existing_definition
+        if not definition:
+            definition = QuizDefinition(video_id=video.id, questions=[])
+            db.session.add(definition)
+
+        definition.title = str(generated_payload.get("title") or f"{video.title} quiz").strip()
+        definition.description = str(
+            generated_payload.get("description")
+            or "AI-generated quiz definition based on the lesson transcript."
+        ).strip()
+        definition.questions = normalized_questions
+        db.session.commit()
+
+        return {
+            "video": video.to_dict(viewer_id=actor_id),
+            "quiz": {
+                "mode": "static",
+                "source": generated_payload.get("source", "ai_generated_from_transcript"),
+                "title": definition.title,
+                "description": definition.description,
+                "question_count": len(normalized_questions),
+                "questions": QuizService._serialize_public_questions(normalized_questions),
+            },
+            "generation": {
+                "provider": generated_payload.get("provider", "openai"),
+                "question_count_requested": generated_payload.get("question_count_requested"),
+                "question_count_saved": len(normalized_questions),
+                "transcript_char_count": generated_payload.get("transcript_char_count", 0),
+                "transcript_chunk_count": generated_payload.get("transcript_chunk_count", 1),
+                "transcript_cache_status": generated_payload.get("transcript_cache_status"),
+                "video_frame_count": generated_payload.get("video_frame_count", 0),
+                "transcript_excerpt": generated_payload.get("transcript_excerpt"),
+                "transcription_model": generated_payload.get("transcription_model"),
+                "quiz_model": generated_payload.get("quiz_model"),
+            },
+        }, None, 200
+
+    @staticmethod
     def get_quiz(user_id, video_id, video=None):
         try:
             normalized_video_id = int(video_id)
@@ -265,9 +282,9 @@ class QuizService:
 
         progress_entry = Progress.query.filter_by(user_id=user_id, video_id=normalized_video_id).first()
         question_set = QuizService._get_question_set(video, progress_entry)
-        questions = question_set["questions"]
-        if not questions:
+        if not question_set:
             return None, "Quiz unavailable for this lesson"
+        questions = question_set["questions"]
 
         latest_attempt = (
             QuizAttempt.query.filter_by(user_id=user_id, video_id=normalized_video_id)
@@ -281,7 +298,7 @@ class QuizService:
             "video": video.to_dict(access_context=VideoService.get_access_context(video, user)),
             "quiz": {
                 "mode": question_set["mode"],
-                "source": "static_definition" if question_set["mode"] == "static" else "generated_prototype",
+                "source": "static_definition",
                 "title": question_set["title"],
                 "description": question_set["description"],
                 "question_count": len(public_questions),
@@ -308,9 +325,9 @@ class QuizService:
 
         progress_entry = Progress.query.filter_by(user_id=user_id, video_id=normalized_video_id).first()
         question_set = QuizService._get_question_set(video, progress_entry)
-        questions = question_set["questions"]
-        if not questions:
+        if not question_set:
             return None, "Quiz unavailable for this lesson"
+        questions = question_set["questions"]
 
         normalized_answers, error = QuizService._normalize_answers(answers, questions)
         if error:
@@ -365,7 +382,7 @@ class QuizService:
             "video": video.to_dict(access_context=VideoService.get_access_context(video, user)),
             "quiz": {
                 "mode": question_set["mode"],
-                "source": "static_definition" if question_set["mode"] == "static" else "generated_prototype",
+                "source": "static_definition",
                 "question_count": question_count,
                 "pass_score": QUIZ_PASS_SCORE,
             },

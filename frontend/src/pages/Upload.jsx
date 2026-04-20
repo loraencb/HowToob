@@ -4,6 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import Button from '../components/common/Button'
 import ErrorMessage from '../components/common/ErrorMessage'
 import { videosAPI } from '../utils/api'
+import {
+  PRIMARY_CATEGORIES,
+  SUB_CATEGORIES,
+  getCategoryMetadata,
+} from '../utils/categoryTaxonomy'
 import styles from './Upload.module.css'
 
 const ACCEPTED_VIDEO_EXTENSIONS = ['mp4']
@@ -45,6 +50,43 @@ function normalizeUploadedVideo(data) {
     title: raw.title || 'Untitled video',
     description: raw.description || '',
     thumbnail_url: raw.thumbnail_url || '',
+    quiz_generation: raw.quiz_generation || null,
+  }
+}
+
+function getQuizGenerationUiState(quizGeneration) {
+  if (!quizGeneration) {
+    return { panel: null, hint: '' }
+  }
+
+  if (quizGeneration.status === 'generated') {
+    const questionCount = quizGeneration.question_count
+    return {
+      panel: {
+        tone: 'success',
+        message: questionCount
+          ? `An AI quiz was generated automatically with ${questionCount} questions.`
+          : quizGeneration.message || 'An AI quiz was generated automatically for this lesson.',
+      },
+      hint: '',
+    }
+  }
+
+  if (quizGeneration.status === 'failed') {
+    return {
+      panel: {
+        tone: 'warning',
+        message:
+          quizGeneration.message ||
+          'The lesson uploaded successfully, but AI quiz generation did not finish for this upload.',
+      },
+      hint: 'You can retry quiz generation later from the creator dashboard.',
+    }
+  }
+
+  return {
+    panel: null,
+    hint: 'You can generate an AI quiz later from the creator dashboard whenever you are ready.',
   }
 }
 
@@ -56,6 +98,8 @@ export default function Upload() {
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [primaryCategory, setPrimaryCategory] = useState('')
+  const [category, setCategory] = useState('')
   const [videoFile, setVideoFile] = useState(null)
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [dragTarget, setDragTarget] = useState('')
@@ -65,10 +109,16 @@ export default function Upload() {
   const [uploadedVideo, setUploadedVideo] = useState(null)
 
   const titleCharactersRemaining = useMemo(() => 150 - title.length, [title.length])
+  const uploadedQuizState = useMemo(
+    () => getQuizGenerationUiState(uploadedVideo?.quiz_generation),
+    [uploadedVideo]
+  )
 
   function resetForm() {
     setTitle('')
     setDescription('')
+    setPrimaryCategory('')
+    setCategory('')
     setVideoFile(null)
     setThumbnailFile(null)
     setFieldErrors({})
@@ -142,6 +192,10 @@ export default function Upload() {
       }
     }
 
+    if (primaryCategory && !category) {
+      nextErrors.category = 'Choose a topic under the selected category.'
+    }
+
     return nextErrors
   }
 
@@ -161,6 +215,10 @@ export default function Upload() {
     payload.append('description', description.trim())
     payload.append('video', videoFile)
 
+    if (category) {
+      payload.append('category', category)
+    }
+
     if (thumbnailFile) {
       payload.append('thumbnail', thumbnailFile)
     }
@@ -175,11 +233,11 @@ export default function Upload() {
     } catch (error) {
       if (error?.code === 'NETWORK_ERROR') {
         setSubmitError(
-          'Could not reach the upload backend from this device. Check the host PC, confirm both devices are on the same Wi-Fi, and allow ports 5000 and 5173 through the firewall.'
+          'Could not reach the upload service from this device. Check that the host machine is still running and both devices are connected correctly.'
         )
       } else if (error?.status === 401) {
         setSubmitError(
-          'Your session was not accepted by the backend. Sign in again on this device and make sure the frontend is using the same LAN IP as the backend.'
+          'Your session could not be verified. Sign in again on this device and try the upload one more time.'
         )
       } else if (error?.status === 403) {
         setSubmitError(
@@ -234,6 +292,25 @@ export default function Upload() {
                 high.
               </p>
 
+              {uploadedQuizState.panel ? (
+                <div
+                  className={`${styles.quizStatus} ${
+                    uploadedQuizState.panel.tone === 'success'
+                      ? styles.quizStatusSuccess
+                      : uploadedQuizState.panel.tone === 'warning'
+                        ? styles.quizStatusWarning
+                        : styles.quizStatusMuted
+                  }`}
+                >
+                  <strong className={styles.quizStatusLabel}>AI quiz:</strong>{' '}
+                  {uploadedQuizState.panel.message}
+                </div>
+              ) : null}
+
+              {uploadedQuizState.hint ? (
+                <p className={styles.quizHint}>{uploadedQuizState.hint}</p>
+              ) : null}
+
               <div className={styles.successActions}>
                 <Link to={`/watch/${uploadedVideo.id}`} className={styles.primaryLink}>
                   Open uploaded lesson
@@ -268,8 +345,7 @@ export default function Upload() {
             Publish a new lesson{user?.username ? `, ${user.username}` : ''}
           </h1>
           <p className={styles.heroSubtitle}>
-            Bring your next lesson into HowToob with a clean upload flow built
-            around the live backend.
+            Bring your next lesson into HowToob with a clean upload flow designed for creators.
           </p>
         </div>
 
@@ -446,6 +522,69 @@ export default function Upload() {
               )}
             </div>
 
+            <div className={styles.categoryGrid}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.inputLabel} htmlFor="upload-primary-category">
+                  Category
+                </label>
+                <select
+                  id="upload-primary-category"
+                  className={styles.selectInput}
+                  value={primaryCategory}
+                  onChange={(event) => {
+                    setPrimaryCategory(event.target.value)
+                    setCategory('')
+                    setFieldErrors((prev) => ({ ...prev, category: '' }))
+                  }}
+                  disabled={submitting}
+                >
+                  <option value="">Select a category</option>
+                  {PRIMARY_CATEGORIES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className={styles.helperText}>
+                  Categories use predefined learning shelves so lessons are easier to browse.
+                </p>
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.inputLabel} htmlFor="upload-category">
+                  Topic label
+                </label>
+                <select
+                  id="upload-category"
+                  className={styles.selectInput}
+                  value={category}
+                  onChange={(event) => {
+                    setCategory(event.target.value)
+                    setFieldErrors((prev) => ({ ...prev, category: '' }))
+                  }}
+                  disabled={submitting || !primaryCategory}
+                >
+                  <option value="">
+                    {primaryCategory ? 'Select a topic' : 'Choose a category first'}
+                  </option>
+                  {(SUB_CATEGORIES[primaryCategory] || []).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.category ? (
+                  <p className={styles.validationText}>{fieldErrors.category}</p>
+                ) : (
+                  <p className={styles.helperText}>
+                    {category
+                      ? `Selected label: ${getCategoryMetadata(category).pathLabel}.`
+                      : 'Pick the most specific topic to help learners find the lesson.'}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className={styles.fieldGroup}>
               <label className={styles.inputLabel} htmlFor="upload-description">
                 Description
@@ -491,12 +630,13 @@ export default function Upload() {
             <ul className={styles.checklist}>
               <li>Make sure the video file is final and exported as MP4.</li>
               <li>Use a title that states the skill or outcome clearly.</li>
+              <li>Choose a category and topic label that match the lesson content.</li>
               <li>Add a thumbnail if you want the lesson to stand out in the feed.</li>
             </ul>
           </section>
 
           <section className={styles.infoCard}>
-            <h3 className={styles.infoTitle}>Current backend rules</h3>
+            <h3 className={styles.infoTitle}>Upload requirements</h3>
             <div className={styles.ruleList}>
               <div className={styles.ruleItem}>
                 <span className={styles.ruleLabel}>Endpoint</span>
@@ -508,7 +648,7 @@ export default function Upload() {
               </div>
               <div className={styles.ruleItem}>
                 <span className={styles.ruleLabel}>Optional</span>
-                <span className={styles.ruleValue}>description, thumbnail</span>
+                <span className={styles.ruleValue}>description, thumbnail, predefined category tag</span>
               </div>
             </div>
           </section>
@@ -516,8 +656,7 @@ export default function Upload() {
           <section className={styles.infoCard}>
             <h3 className={styles.infoTitle}>After upload</h3>
             <p className={styles.infoBody}>
-              Once the backend accepts the file, you will get a direct link to the
-              new watch page and a fast path back to the home feed.
+              After your file is accepted, you will get a direct link to the new lesson and a fast path back to the home feed.
             </p>
             <Link to="/" className={styles.inlineLink}>
               Preview the current feed

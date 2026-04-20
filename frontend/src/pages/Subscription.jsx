@@ -8,6 +8,7 @@ import { authAPI, usersAPI, videosAPI } from '../utils/api'
 import { getAccessMetadata, getCreatorProfileSlug } from '../utils/lessonMetadata'
 import {
   formatNumericDate,
+  formatRatingSummary,
   formatViewCount,
   getInitials,
   getProgressLabel,
@@ -240,8 +241,7 @@ export default function Subscription() {
           <p className={styles.eyebrow}>Learning subscriptions</p>
           <h1 className={styles.title}>Followed creators and next lessons</h1>
           <p className={styles.subtitle}>
-            Subscription records come from the backend. Creator names and lesson
-            suggestions are enriched from the current feed when more metadata is available.
+            Keep up with the creators you follow and the lessons most relevant to your learning network.
           </p>
         </div>
 
@@ -253,8 +253,8 @@ export default function Subscription() {
             </strong>
           </article>
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Unsubscribe</span>
-            <strong className={styles.metaValue}>Not supported yet</strong>
+            <span className={styles.metaLabel}>Following</span>
+            <strong className={styles.metaValue}>Active</strong>
           </article>
         </div>
       </section>
@@ -263,7 +263,7 @@ export default function Subscription() {
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Creators followed</span>
           <strong className={styles.statValue}>{enrichedSubscriptions.length}</strong>
-          <span className={styles.statText}>Backend subscription records</span>
+          <span className={styles.statText}>Creators in your learning network</span>
         </article>
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Lessons in feed</span>
@@ -283,7 +283,7 @@ export default function Subscription() {
           <p className={styles.nudgeText}>
             {enrichedSubscriptions.length > 0
               ? 'Followed creators shape your dashboard and search context. Open a lesson from this page to keep the learning flow tight.'
-              : 'You have not followed any creators yet. Use the watch page follow action to turn subscriptions into a real learning network.'}
+              : 'You have not followed any creators yet. Follow creators from the watch page to build your learning network.'}
           </p>
         </section>
       ) : null}
@@ -324,11 +324,11 @@ export default function Subscription() {
                     ) : null}
                   </div>
 
-                  <p className={styles.creatorText}>
-                    {creator.lessonCount > 0
-                      ? `${creator.lessonCount} lesson${creator.lessonCount === 1 ? '' : 's'} are currently visible in the feed from this creator.`
-                      : 'The subscription record exists, but the current feed does not expose richer creator metadata yet.'}
-                  </p>
+                    <p className={styles.creatorText}>
+                      {creator.lessonCount > 0
+                        ? `${creator.lessonCount} lesson${creator.lessonCount === 1 ? '' : 's'} are currently visible in the feed from this creator.`
+                      : 'This creator is in your network and their next published lessons will appear here.'}
+                    </p>
 
                   {creator.sampleTitle ? (
                     <p className={styles.creatorHint}>
@@ -399,9 +399,9 @@ export default function Subscription() {
                     <Link to={`/watch/${video.id}`} className={styles.lessonTitle}>
                       {truncate(video.title, 72)}
                     </Link>
-                    <p className={styles.lessonMeta}>
-                      {video.creator_name} | {formatViewCount(video.views)} views
-                    </p>
+                      <p className={styles.lessonMeta}>
+                        {video.creator_name} | {formatViewCount(video.views)} views | {formatRatingSummary(video.average_rating, video.rating_count ?? video.like_count)}
+                      </p>
                     <p className={styles.lessonText}>
                       {video.description
                         ? truncate(video.description, 120)
@@ -436,8 +436,7 @@ export default function Subscription() {
           <article className={styles.emptyState}>
             <h3 className={styles.emptyTitle}>No current feed lessons from followed creators</h3>
             <p className={styles.emptyText}>
-              Your subscriptions are valid, but the current backend feed did not return
-              matching lessons right now.
+              Your followed creators do not have matching lessons in view right now.
             </p>
           </article>
         )}
@@ -475,8 +474,7 @@ export default function Subscription() {
               </div>
             ) : (
               <p className={styles.panelText}>
-                Feed metadata is limited right now, so creator recommendations are waiting
-                on more visible creator entries.
+                More creator suggestions will appear here as your lesson library grows.
               </p>
             )}
           </article>
@@ -491,9 +489,9 @@ export default function Subscription() {
                       <strong className={styles.recommendationTitle}>
                         {truncate(video.title, 58)}
                       </strong>
-                      <p className={styles.recommendationText}>
-                        {video.creator_name} | {formatViewCount(video.views)} views
-                      </p>
+                        <p className={styles.recommendationText}>
+                          {video.creator_name} | {formatViewCount(video.views)} views | {formatRatingSummary(video.average_rating, video.rating_count ?? video.like_count)}
+                        </p>
                     </div>
                     <Link to={`/watch/${video.id}`} className={styles.secondaryLink}>
                       Open lesson
@@ -503,7 +501,7 @@ export default function Subscription() {
               </div>
             ) : (
               <p className={styles.panelText}>
-                Once the backend feed returns more items, this section becomes a wider exploration shelf.
+                More lesson suggestions will appear here as your library expands.
               </p>
             )}
           </article>

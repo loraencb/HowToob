@@ -2,7 +2,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
 from sqlalchemy import inspect, text
-from .config import Config
+from .config import Config, normalize_origin
 from .extensions import db, login_manager, migrate
 
 SCHEMA_PATCHES = {
@@ -21,6 +21,12 @@ SCHEMA_PATCHES = {
     "comments": {
         "parent_id": {
             "alter_sql": "ALTER TABLE comments ADD COLUMN parent_id INTEGER",
+        },
+    },
+    "likes": {
+        "rating": {
+            "alter_sql": "ALTER TABLE likes ADD COLUMN rating INTEGER NOT NULL DEFAULT 5",
+            "backfill_sql": "UPDATE likes SET rating = 5 WHERE rating IS NULL OR rating < 1 OR rating > 5",
         },
     },
     "videos": {
@@ -88,11 +94,17 @@ def create_app(config_overrides=None):
         if not origin:
             return response
 
-        allowed_origins = set(app.config.get("CORS_ALLOWED_ORIGINS", []))
+        normalized_origin = normalize_origin(origin)
+        allowed_origins = {
+            normalize_origin(allowed_origin)
+            for allowed_origin in app.config.get("CORS_ALLOWED_ORIGINS", [])
+            if normalize_origin(allowed_origin)
+        }
         allow_all_dev = app.config.get("CORS_ALLOW_ALL_DEV", False)
+        debug_mode = app.config.get("DEBUG", False)
 
-        if allow_all_dev or origin in allowed_origins:
-            response.headers["Access-Control-Allow-Origin"] = origin
+        if allow_all_dev or normalized_origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = normalized_origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
@@ -101,11 +113,18 @@ def create_app(config_overrides=None):
             vary = response.headers.get("Vary", "")
             if "Origin" not in vary:
                 response.headers["Vary"] = f"{vary}, Origin".strip(", ")
+        elif debug_mode:
+            app.logger.warning(
+                "Rejected CORS origin '%s'. Allowed origins: %s",
+                normalized_origin,
+                sorted(allowed_origins),
+            )
 
         return response
     
     from .models import (
         Comment,
+        CommentLike,
         Like,
         ModerationLog,
         Playlist,
@@ -117,6 +136,7 @@ def create_app(config_overrides=None):
         Subscription,
         User,
         Video,
+        VideoTranscript,
     )
     from .routes import admin_bp, auth_bp, playlist_bp, progress_bp, quiz_bp, social_bp, user_bp, video_bp
 

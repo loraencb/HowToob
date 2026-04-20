@@ -117,6 +117,65 @@ is still acceptable in development if your database has broader schema drift or 
 you no longer need, but it should no longer be necessary for the `users.role` or
 `subscriptions.tier_level` mismatch crashes.
 
+## AI Quiz Generation
+
+HowToob now includes an on-demand backend path for generating quiz definitions from uploaded lesson media, plus an optional auto-generate-on-upload mode for creator workflows.
+
+Current MVP shape:
+
+- creators and admins can call `POST /videos/<video_id>/quiz/generate`
+- the backend transcribes the uploaded lesson file first, then asks the model for a structured quiz definition
+- the generator can now combine the lesson transcript with sampled video frames, so on-screen diagrams, code, and visual demonstrations can influence the quiz too
+- generated questions are saved as a normal `QuizDefinition`, so the existing learner quiz flow keeps working
+- if enabled, the upload route can automatically generate a quiz after saving the lesson file
+- transcripts are cached per video so repeat generation does not re-transcribe unchanged lesson files
+- larger lesson files can be split into audio chunks with `ffmpeg` before transcription
+
+Environment variables:
+
+```env
+OPENAI_API_KEY=
+OPENAI_API_BASE_URL=https://api.openai.com/v1
+OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
+OPENAI_QUIZ_MODEL=gpt-4o-mini
+QUIZ_AI_DEFAULT_QUESTION_COUNT=10
+QUIZ_AI_MIN_TRANSCRIPT_CHARS=30
+QUIZ_AI_MAX_TRANSCRIPT_CHARS=12000
+QUIZ_AI_INCLUDE_VIDEO_FRAMES=true
+QUIZ_AI_FRAME_SAMPLE_COUNT=4
+QUIZ_AI_FRAME_WIDTH=768
+QUIZ_AI_AUTO_GENERATE_ON_UPLOAD=false
+QUIZ_AI_AUTO_GENERATE_QUESTION_COUNT=10
+QUIZ_AI_CHUNK_SECONDS=600
+QUIZ_AI_AUDIO_BITRATE_KBPS=64
+QUIZ_AI_FFMPEG_BINARY=ffmpeg
+```
+
+Example request:
+
+```bash
+curl -X POST http://localhost:5000/videos/12/quiz/generate \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{"question_count": 10}'
+```
+
+Current dev limitations:
+
+- the generator needs `OPENAI_API_KEY` configured on the backend
+- it works against the uploaded lesson file already stored on disk
+- the quiz prompt still uses a trimmed transcript window before generation
+- sampled video frames are attached as image inputs when frame extraction is available, which helps with visual lessons that rely on diagrams or on-screen text
+- transcript chunking for larger lesson files requires `ffmpeg` to be available on the host machine
+- if a lesson already has a stored quiz definition, pass `overwrite=true` to replace it
+
+Upload behavior:
+
+- `POST /videos/upload` still succeeds even if AI quiz generation fails
+- when auto-generation is enabled, the upload response now includes a `quiz_generation` object with `generated`, `failed`, or `skipped` status details
+
+Deleting or editing a generated quiz is still handled through the existing quiz-definition path.
+
 ## LAN Development
 
 Use these settings when one PC is hosting the app and other devices on the same Wi-Fi need access.
@@ -251,5 +310,80 @@ Known development limits:
 - HTTP LAN mode is for demos only; it is not a production deployment.
 - If a device changes networks, the current session may need a fresh login.
 - Uploading large videos over Wi-Fi can feel slower or less reliable than on the host PC.
+
+## Access Modes
+
+HowToob can be exposed from the host machine in two simple development modes at the same time:
+
+- `LAN`: devices on the same Wi-Fi use the host machine's local network IP such as `192.168.x.x`
+- `VPN`: devices connected to the same private VPN overlay use the host machine's VPN IP such as `100.x.x.x`
+
+Both modes can stay enabled together because the backend now accepts a comma-separated list of allowed frontend origins.
+
+### LAN (same Wi-Fi)
+
+1. Run `ipconfig` on the host PC.
+2. Use the IPv4 address from the active Wi-Fi adapter, for example `192.168.1.50`.
+3. Open the frontend from other devices at:
+
+```text
+http://<LAN_IP>:5173
+```
+
+4. The backend will be reachable at:
+
+```text
+http://<LAN_IP>:5000
+```
+
+### VPN (remote access)
+
+1. Connect the host machine and the other device to the same private VPN overlay.
+2. Find the host machine's VPN IP from the VPN client, for example `100.64.0.5`.
+3. Open the frontend from other VPN-connected devices at:
+
+```text
+http://<VPN_IP>:5173
+```
+
+4. The backend will be reachable at:
+
+```text
+http://<VPN_IP>:5000
+```
+
+### LAN vs VPN IP
+
+- A `LAN IP` only works for devices on the same local network, usually the same Wi-Fi.
+- A `VPN IP` works for devices joined to the same private VPN, even when they are not on the same Wi-Fi.
+- The host machine must stay powered on and keep both backend and frontend running in either mode.
+
+### CORS and environment setup
+
+Set the backend allowlist once and include every frontend origin you plan to use:
+
+```env
+CORS_ALLOWED_ORIGINS=http://192.168.1.25:5173,http://100.64.0.5:5173,http://localhost:5173
+```
+
+Then point the frontend at whichever backend address matches the access mode you want to use:
+
+```env
+# LAN
+VITE_API_BASE_URL=http://192.168.1.25:5000
+
+# VPN
+VITE_API_BASE_URL=http://100.64.0.5:5000
+```
+
+### Switching between LAN and VPN
+
+No code changes are required.
+
+1. Leave the backend running on `0.0.0.0:5000`.
+2. Update only `VITE_API_BASE_URL` in `frontend/.env.local` or your shell.
+3. Restart the Vite dev server if the environment variable changed.
+
+This lets you move between same-Wi-Fi demos and VPN-overlay access by changing env values only.
 
 Supporting project documents and project-plan artifacts live in `docs/`.

@@ -7,13 +7,20 @@ import useLocalPreferences from '../hooks/useLocalPreferences'
 import { CATEGORIES } from '../utils/constants'
 import { videosAPI } from '../utils/api'
 import {
+  getCategoryMetadata,
+  matchesCategoryFilter,
+  normalizeCategoryValue,
+} from '../utils/categoryTaxonomy'
+import {
   getAccessMetadata,
   getCategoryLabel,
+  getCategoryPrimaryLabel,
   getCreatorName,
   getCreatorProfileSlug,
 } from '../utils/lessonMetadata'
 import {
   formatNumericDate,
+  formatRatingSummary,
   formatViewCount,
   getProgressLabel,
   truncate,
@@ -44,22 +51,13 @@ function normalizeVideo(video) {
     thumbnail_url: video.thumbnail_url || video.thumbnail || '',
     created_at: video.created_at || null,
     views: video.views || 0,
+    like_count: video.like_count || 0,
+    rating_count: video.rating_count ?? video.like_count ?? 0,
+    average_rating: video.average_rating ?? 0,
     category: video.category || video.subject || video.topic || '',
     creator_id: video.creator_id ?? video.creator?.id ?? null,
     creator_name: getCreatorName(video),
   }
-}
-
-function getCategoryOption(video) {
-  const rawCategory = (video.category || '').toLowerCase().trim()
-  const matched = CATEGORIES.find(
-    (option) =>
-      rawCategory === option.value ||
-      rawCategory.includes(option.value) ||
-      rawCategory.includes(option.label.toLowerCase())
-  )
-
-  return matched || null
 }
 
 function inferLearningLevel(video) {
@@ -89,26 +87,22 @@ function getCreatorKey(video) {
 }
 
 function matchesCategory(video, selectedCategory) {
-  if (selectedCategory === 'all') return true
-
-  const categoryOption = getCategoryOption(video)
-  if (categoryOption) {
-    return categoryOption.value === selectedCategory
-  }
-
-  return (video.category || '').toLowerCase().includes(selectedCategory)
+  return selectedCategory === 'all'
+    ? true
+    : matchesCategoryFilter(video.category, selectedCategory)
 }
 
 export default function Search() {
   const [searchParams] = useSearchParams()
   const query = (searchParams.get('q') || '').trim()
+  const requestedCategory = normalizeCategoryValue(searchParams.get('category')) || 'all'
   const { progress } = useProgress()
   const [preferences] = useLocalPreferences()
 
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState(requestedCategory)
   const [levelFilter, setLevelFilter] = useState('all')
   const [creatorFilter, setCreatorFilter] = useState('all')
 
@@ -140,6 +134,10 @@ export default function Search() {
       active = false
     }
   }, [query])
+
+  useEffect(() => {
+    setCategoryFilter(requestedCategory)
+  }, [requestedCategory])
 
   const creatorOptions = useMemo(() => {
     const seen = new Set()
@@ -213,20 +211,20 @@ export default function Search() {
           </h1>
           <p className={styles.subtitle}>
             {isDiscoveryMode
-              ? 'Explore the current backend feed, then narrow it with frontend learning filters for category, level, and creator.'
-              : 'Keyword matching comes from the backend search query. Category, creator, and learning level are layered transparently in the frontend.'}
+              ? 'Browse the lesson library, then narrow it by category, level, and creator.'
+              : 'Use search plus learning filters to quickly find the right lesson for your next step.'}
           </p>
         </div>
 
         <div className={styles.heroMeta}>
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Backend source</span>
+            <span className={styles.metaLabel}>Library scope</span>
             <strong className={styles.metaValue}>
-              {isDiscoveryMode ? '/videos/feed' : '/videos/feed?search='}
+              {isDiscoveryMode ? 'All published lessons' : 'Search results'}
             </strong>
           </article>
           <article className={styles.metaCard}>
-            <span className={styles.metaLabel}>Frontend filters</span>
+            <span className={styles.metaLabel}>Filters</span>
             <strong className={styles.metaValue}>
               {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Ready'}
             </strong>
@@ -239,8 +237,7 @@ export default function Search() {
           <div>
             <h2 className={styles.filtersTitle}>Refine the lesson list</h2>
             <p className={styles.filtersText}>
-              Category and creator filters use the videos already returned from the
-              backend. Learning level is a frontend-only MVP label in this build.
+              Narrow the library by category, level, and creator to shape a more focused study list.
             </p>
           </div>
           {activeFilterCount > 0 ? (
@@ -321,7 +318,7 @@ export default function Search() {
               <p className={styles.summaryText}>
                 Showing {filteredVideos.length} lesson{filteredVideos.length === 1 ? '' : 's'}
                 {activeFilterCount > 0
-                  ? ` from ${videos.length} backend result${videos.length === 1 ? '' : 's'}`
+                  ? ` from ${videos.length} available result${videos.length === 1 ? '' : 's'}`
                   : ''}
                 .
               </p>
@@ -337,8 +334,8 @@ export default function Search() {
               <p className={styles.emptyText}>
                 {videos.length === 0
                   ? isDiscoveryMode
-                    ? 'The backend feed has not returned any lessons yet, so discovery shelves are still empty.'
-                    : `The backend did not return search matches for "${query}".`
+                    ? 'No published lessons are available yet.'
+                    : `No lessons matched "${query}".`
                   : 'Try broadening the category, level, or creator filters to reopen the current result set.'}
               </p>
               <div className={styles.emptyActions}>
@@ -358,9 +355,9 @@ export default function Search() {
                 preferences.compactCardLayout ? styles.resultsGridCompact : ''
               }`}
             >
-              {filteredVideos.map((video) => {
-                const progressEntry = progress[String(video.id)]
-                const categoryOption = getCategoryOption(video)
+                {filteredVideos.map((video) => {
+                  const progressEntry = progress[String(video.id)]
+                const categoryMetadata = getCategoryMetadata(video.category)
                 const level = inferLearningLevel(video)
                 const accessMetadata = getAccessMetadata(video)
                 const profileSlug = getCreatorProfileSlug(video)
@@ -388,8 +385,11 @@ export default function Search() {
 
                       <div className={styles.badgeRow}>
                         <span className={styles.resultBadge}>
-                          {categoryOption?.label || getCategoryLabel(video)}
+                          {getCategoryPrimaryLabel(video)}
                         </span>
+                        {categoryMetadata.primaryValue && categoryMetadata.value !== categoryMetadata.primaryValue ? (
+                          <span className={styles.resultBadge}>{getCategoryLabel(video)}</span>
+                        ) : null}
                         <span className={styles.resultBadge}>{level}</span>
                         <span className={styles.resultBadge}>{accessMetadata.badgeLabel}</span>
                         {preferences.showProgressBadges && progressEntry ? (
@@ -417,9 +417,9 @@ export default function Search() {
                         )}
                       </div>
 
-                      <p className={styles.meta}>
-                        {formatViewCount(video.views)} views | {formatNumericDate(video.created_at)}
-                      </p>
+                        <p className={styles.meta}>
+                          {formatViewCount(video.views)} views | {formatRatingSummary(video.average_rating, video.rating_count)} | {formatNumericDate(video.created_at)}
+                        </p>
 
                       <p className={styles.desc}>
                         {video.description
@@ -435,8 +435,8 @@ export default function Search() {
                       <div className={styles.cardFooter}>
                         <span className={styles.footerNote}>
                           {isDiscoveryMode
-                            ? 'Browse result from the live backend feed'
-                            : 'Keyword match from backend, refined in the frontend'}
+                            ? 'Part of the current lesson library'
+                            : 'Matched to your search and filters'}
                         </span>
                         <Link to={`/watch/${video.id}`} className={styles.inlineAction}>
                           Open lesson
