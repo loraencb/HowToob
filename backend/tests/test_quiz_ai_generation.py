@@ -200,7 +200,7 @@ def test_openai_quota_error_is_reported_clearly():
 
 
 def test_transcript_below_minimum_is_rejected_and_marked(app, monkeypatch):
-    def fake_get_or_create_transcript(video, config):
+    def fake_get_or_create_transcript(video, config, **_kwargs):
         return {
             "text": "Earth rotates daily.",
             "excerpt": "Earth rotates daily.",
@@ -246,7 +246,7 @@ def test_transcript_below_minimum_is_rejected_and_marked(app, monkeypatch):
 
 
 def test_tiny_transcript_is_rejected_clearly(app, monkeypatch):
-    def fake_get_or_create_transcript(video, config):
+    def fake_get_or_create_transcript(video, config, **_kwargs):
         return {
             "text": "Hi",
             "excerpt": "Hi",

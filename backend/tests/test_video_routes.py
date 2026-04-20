@@ -56,6 +56,25 @@ def test_get_single_video_increments_views(auth_client):
     assert response2.get_json()["views"] == 2
 
 
+def test_remote_video_file_route_redirects_to_temporary_storage_url(auth_client, monkeypatch):
+    monkeypatch.setattr(
+        "backend.src.app.routes.video.routes.build_storage_access_url",
+        lambda storage_path: "https://cdn.example.test/signed-lesson.mp4",
+    )
+
+    create_response = auth_client.post("/videos/", json={
+        "title": "Stored In Spaces",
+        "description": "Remote media should be served through a signed URL",
+        "file_path": "spaces://howtoob/howtoob/videos/signed-lesson.mp4",
+    })
+
+    video_url = create_response.get_json()["video_url"]
+    response = auth_client.get(video_url)
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "https://cdn.example.test/signed-lesson.mp4"
+
+
 def test_update_video(auth_client):
     create_response = auth_client.post("/videos/", json={
         "title": "Old Title",

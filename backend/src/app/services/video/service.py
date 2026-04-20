@@ -5,6 +5,7 @@ from ...models.subscription import Subscription
 from ...models.video import Video
 from ...models.user import User
 from ...utils.category_taxonomy import normalize_category_value
+from ...utils.file_handler import StorageError, delete_stored_file
 
 
 class VideoService:
@@ -77,6 +78,18 @@ class VideoService:
         return (
             VideoService.with_relations()
             .filter(Video.file_path.like(f"%{filename}"))
+            .order_by(Video.id.desc())
+            .first()
+        )
+
+    @staticmethod
+    def get_video_by_thumbnail_filename(filename):
+        if not filename:
+            return None
+
+        return (
+            VideoService.with_relations()
+            .filter(Video.thumbnail_path.like(f"%{filename}"))
             .order_by(Video.id.desc())
             .first()
         )
@@ -246,5 +259,12 @@ class VideoService:
 
     @staticmethod
     def delete_video(video):
+        stored_paths = [video.file_path, video.thumbnail_path]
         db.session.delete(video)
         db.session.commit()
+
+        for stored_path in stored_paths:
+            try:
+                delete_stored_file(stored_path)
+            except StorageError:
+                continue

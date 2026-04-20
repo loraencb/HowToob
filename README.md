@@ -163,7 +163,7 @@ curl -X POST http://localhost:5000/videos/12/quiz/generate \
 Current dev limitations:
 
 - the generator needs `OPENAI_API_KEY` configured on the backend
-- it works against the uploaded lesson file already stored on disk
+- it works against the uploaded lesson file stored locally or in DigitalOcean Spaces
 - the quiz prompt still uses a trimmed transcript window before generation
 - sampled video frames are attached as image inputs when frame extraction is available, which helps with visual lessons that rely on diagrams or on-screen text
 - transcript chunking for larger lesson files requires `ffmpeg` to be available on the host machine
@@ -237,9 +237,27 @@ QUIZ_AI_DEFAULT_QUESTION_COUNT=10
 QUIZ_AI_AUTO_GENERATE_ON_UPLOAD=true
 QUIZ_AI_AUTO_GENERATE_QUESTION_COUNT=10
 QUIZ_AI_FFMPEG_BINARY=ffmpeg
+FILE_STORAGE_BACKEND=local
 ```
 
 `SECRET_KEY` and `OPENAI_API_KEY` should be secret variables in DigitalOcean.
+
+For deployed apps that need uploaded videos to survive redeploys, set up
+DigitalOcean Spaces and change the storage envs to:
+
+```env
+FILE_STORAGE_BACKEND=spaces
+SPACES_BUCKET=<your-space-name>
+SPACES_REGION=<your-space-region>
+SPACES_ENDPOINT_URL=https://<your-space-region>.digitaloceanspaces.com
+SPACES_ACCESS_KEY_ID=<set as secret>
+SPACES_SECRET_ACCESS_KEY=<set as secret>
+SPACES_KEY_PREFIX=howtoob
+SPACES_PRESIGNED_URL_SECONDS=900
+```
+
+`SPACES_ACCESS_KEY_ID` and `SPACES_SECRET_ACCESS_KEY` should also be secret
+variables in DigitalOcean.
 
 ### App spec option
 
@@ -247,12 +265,15 @@ You can also use `.do/app.yaml` as a starting point in the App Platform spec edi
 Before saving it, replace the placeholder secret values with real secret values in the
 DigitalOcean UI.
 
-### Deployment limits to know
+### Deployment storage to know
 
 - App Platform containers have ephemeral local disk. PostgreSQL should be used for app data.
-- Uploaded video files are still stored on the container filesystem in this MVP, so they
-  can disappear after redeploys/restarts. For a durable production setup, move uploaded
-  videos and thumbnails to object storage such as DigitalOcean Spaces.
+- If `FILE_STORAGE_BACKEND=local`, uploaded video files are stored on the container
+  filesystem and can disappear after redeploys/restarts.
+- If `FILE_STORAGE_BACKEND=spaces`, new uploaded videos and thumbnails are stored in
+  DigitalOcean Spaces and continue working across redeploys. Existing videos that were
+  already lost from the old container must be re-uploaded because the file bytes are no
+  longer recoverable from App Platform.
 - The Dockerfile installs `ffmpeg`, so AI transcript chunking and frame sampling work in
   the deployed container.
 - The app currently creates tables on startup as a safety net. Migrations are included,

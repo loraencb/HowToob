@@ -15,6 +15,7 @@ from flask import current_app
 from ...extensions import db
 from ...models.video_transcript import VideoTranscript
 from ...utils.category_taxonomy import get_category_metadata
+from ...utils.file_handler import StorageError, readable_file_path
 
 
 TRANSCRIPTION_FILE_LIMIT_BYTES = 25 * 1024 * 1024
@@ -89,16 +90,34 @@ class OpenAIQuizGenerator:
         if normalized_question_count < 3 or normalized_question_count > 10:
             raise QuizGenerationError("question_count must be an integer between 3 and 10")
 
-        lesson_file = Path(str(video.file_path or "")).expanduser()
-        if not lesson_file.exists() or not lesson_file.is_file():
-            raise QuizGenerationError(
-                "The uploaded lesson file is not available on this server, so AI quiz generation cannot read it. "
-                "If this happened after a DigitalOcean redeploy or restart, re-upload the lesson or move uploads "
-                "to durable storage such as DigitalOcean Spaces.",
-                status_code=400,
-            )
+        try:
+            with readable_file_path(video.file_path) as lesson_file:
+                if not lesson_file.exists() or not lesson_file.is_file():
+                    raise QuizGenerationError(
+                        "The uploaded lesson file is not available on this server, so AI quiz generation cannot read it. "
+                        "If this happened after a DigitalOcean redeploy or restart, re-upload the lesson or move uploads "
+                        "to durable storage such as DigitalOcean Spaces.",
+                        status_code=400,
+                    )
 
-        transcript_bundle = OpenAIQuizGenerator._get_or_create_transcript(video, config)
+                return OpenAIQuizGenerator._generate_quiz_definition_from_file(
+                    video=video,
+                    lesson_file=lesson_file,
+                    source_file_path=str(video.file_path or lesson_file),
+                    question_count=normalized_question_count,
+                    config=config,
+                )
+        except StorageError as exc:
+            raise QuizGenerationError(str(exc), status_code=502) from exc
+
+    @staticmethod
+    def _generate_quiz_definition_from_file(video, lesson_file, source_file_path, question_count, config):
+        transcript_bundle = OpenAIQuizGenerator._get_or_create_transcript(
+            video,
+            config,
+            lesson_file=lesson_file,
+            source_file_path=source_file_path,
+        )
         cleaned_transcript = str(transcript_bundle.get("text") or "").strip()
         transcript_char_count = len(cleaned_transcript)
         min_transcript_chars = max(
@@ -115,17 +134,22 @@ class OpenAIQuizGenerator:
 
         max_transcript_chars = max(1000, int(config.get("QUIZ_AI_MAX_TRANSCRIPT_CHARS", 12000) or 12000))
         prompt_transcript = cleaned_transcript[:max_transcript_chars]
-        generated = OpenAIQuizGenerator._generate_quiz_from_transcript(
-            video=video,
-            transcript=prompt_transcript,
-            question_count=normalized_question_count,
-            config=config,
-            transcript_is_brief=False,
-        )
+        original_file_path = video.file_path
+        try:
+            video.file_path = str(lesson_file)
+            generated = OpenAIQuizGenerator._generate_quiz_from_transcript(
+                video=video,
+                transcript=prompt_transcript,
+                question_count=question_count,
+                config=config,
+                transcript_is_brief=False,
+            )
+        finally:
+            video.file_path = original_file_path
 
         generated["provider"] = "openai"
         generated["source"] = "ai_generated_from_transcript"
-        generated["question_count_requested"] = normalized_question_count
+        generated["question_count_requested"] = question_count
         generated["transcript_char_count"] = transcript_char_count
         generated["transcript_excerpt"] = transcript_bundle.get("excerpt") or cleaned_transcript[:600]
         generated["transcription_model"] = transcript_bundle.get("model_name") or config.get("OPENAI_TRANSCRIPTION_MODEL")
@@ -137,8 +161,9 @@ class OpenAIQuizGenerator:
         return generated
 
     @staticmethod
-    def _get_or_create_transcript(video, config):
-        lesson_file = Path(str(video.file_path or "")).expanduser()
+    def _get_or_create_transcript(video, config, lesson_file=None, source_file_path=None):
+        lesson_file = Path(lesson_file) if lesson_file is not None else Path(str(video.file_path or "")).expanduser()
+        source_file_path = str(source_file_path or lesson_file)
         file_size = lesson_file.stat().st_size
         cache_entry = VideoTranscript.query.filter_by(video_id=video.id).first()
         if not cache_entry:
@@ -149,7 +174,7 @@ class OpenAIQuizGenerator:
         cache_valid = (
             cache_entry.status == "completed"
             and cache_entry.transcript_text
-            and cache_entry.source_file_path == str(lesson_file)
+            and cache_entry.source_file_path == source_file_path
             and int(cache_entry.source_file_size_bytes or 0) == int(file_size)
         )
         if cache_valid:
@@ -166,7 +191,7 @@ class OpenAIQuizGenerator:
         cache_entry.error_message = None
         cache_entry.provider = "openai"
         cache_entry.model_name = str(config.get("OPENAI_TRANSCRIPTION_MODEL") or "").strip() or None
-        cache_entry.source_file_path = str(lesson_file)
+        cache_entry.source_file_path = source_file_path
         cache_entry.source_file_size_bytes = int(file_size)
         db.session.commit()
 

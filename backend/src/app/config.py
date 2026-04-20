@@ -125,6 +125,24 @@ class Config:
 
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024
 
+    FILE_STORAGE_BACKEND = os.getenv("FILE_STORAGE_BACKEND", "local").strip().lower() or "local"
+    SPACES_BUCKET = os.getenv("SPACES_BUCKET", "").strip()
+    SPACES_REGION = os.getenv("SPACES_REGION", "nyc3").strip()
+    SPACES_ENDPOINT_URL = (
+        os.getenv("SPACES_ENDPOINT_URL", "").strip()
+        or (f"https://{SPACES_REGION}.digitaloceanspaces.com" if SPACES_REGION else "")
+    )
+    SPACES_ACCESS_KEY_ID = (
+        os.getenv("SPACES_ACCESS_KEY_ID", "").strip()
+        or os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+    )
+    SPACES_SECRET_ACCESS_KEY = (
+        os.getenv("SPACES_SECRET_ACCESS_KEY", "").strip()
+        or os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
+    )
+    SPACES_KEY_PREFIX = os.getenv("SPACES_KEY_PREFIX", "howtoob").strip().strip("/")
+    SPACES_PRESIGNED_URL_SECONDS = parse_int(os.getenv("SPACES_PRESIGNED_URL_SECONDS"), 900)
+
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
     OPENAI_API_BASE_URL = os.getenv("OPENAI_API_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     OPENAI_TRANSCRIPTION_MODEL = os.getenv("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe").strip()

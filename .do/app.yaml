@@ -53,6 +53,26 @@ services:
         value: "false"
         scope: RUN_TIME
         type: GENERAL
+      - key: FILE_STORAGE_BACKEND
+        value: "local"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPACES_REGION
+        value: "nyc3"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPACES_ENDPOINT_URL
+        value: "https://nyc3.digitaloceanspaces.com"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPACES_KEY_PREFIX
+        value: "howtoob"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPACES_PRESIGNED_URL_SECONDS
+        value: "900"
+        scope: RUN_TIME
+        type: GENERAL
       - key: SESSION_COOKIE_SECURE
         value: "true"
         scope: RUN_TIME

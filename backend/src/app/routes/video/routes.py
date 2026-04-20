@@ -1,6 +1,14 @@
-from flask import Blueprint, request, jsonify, current_app, send_from_directory
+from flask import Blueprint, request, jsonify, current_app, redirect, send_from_directory
 from flask_login import login_required, current_user
-from ...utils.file_handler import save_file, allowed_file, ALLOWED_VIDEO_EXTENSIONS, ALLOWED_IMAGE_EXTENSIONS
+from ...utils.file_handler import (
+    ALLOWED_IMAGE_EXTENSIONS,
+    ALLOWED_VIDEO_EXTENSIONS,
+    StorageError,
+    allowed_file,
+    build_storage_access_url,
+    is_remote_storage_path,
+    save_file,
+)
 from ...services.progress import ProgressService
 from ...services.quiz import QuizService
 from ...services.quiz.ai_generation import is_placeholder_openai_api_key
@@ -289,6 +297,11 @@ def serve_video(filename):
         access_context = VideoService.get_access_context(video, viewer)
         if not access_context["has_access"]:
             return jsonify(VideoService.build_access_denied_payload(video, access_context)), 403
+        if is_remote_storage_path(video.file_path):
+            try:
+                return redirect(build_storage_access_url(video.file_path), code=302)
+            except StorageError as exc:
+                return jsonify({"error": str(exc)}), 502
 
     return send_from_directory(
         current_app.config["VIDEO_UPLOAD_FOLDER"],
@@ -298,6 +311,13 @@ def serve_video(filename):
 
 @video_bp.route("/files/thumbnails/<filename>")
 def serve_thumbnail(filename):
+    video = VideoService.get_video_by_thumbnail_filename(filename)
+    if video and is_remote_storage_path(video.thumbnail_path):
+        try:
+            return redirect(build_storage_access_url(video.thumbnail_path), code=302)
+        except StorageError as exc:
+            return jsonify({"error": str(exc)}), 502
+
     return send_from_directory(
         current_app.config["THUMBNAIL_UPLOAD_FOLDER"],
         filename
