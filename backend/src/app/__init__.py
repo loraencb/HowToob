@@ -109,10 +109,47 @@ def validate_database_config(app):
 def log_database_config(app):
     database_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
     summary = describe_database_uri(database_uri)
+    message = (
+        "HowToob database config: "
+        f"source={app.config.get('SQLALCHEMY_DATABASE_URI_SOURCE')} "
+        f"require_database_url={bool(app.config.get('REQUIRE_DATABASE_URL'))} "
+        f"scheme={summary['scheme']} "
+        f"host={summary['host']} "
+        f"database={summary['database']}"
+    )
+    print(message, flush=True)
     app.logger.warning(
-        "HowToob database config: source=%s require_database_url=%s scheme=%s host=%s database=%s",
-        app.config.get("SQLALCHEMY_DATABASE_URI_SOURCE"),
-        bool(app.config.get("REQUIRE_DATABASE_URL")),
+        "%s",
+        message,
+    )
+
+
+def log_database_connection_ready(app):
+    summary = describe_database_uri(str(app.config.get("SQLALCHEMY_DATABASE_URI") or ""))
+    print(
+        "HowToob database connected: "
+        f"scheme={summary['scheme']} host={summary['host']} database={summary['database']}",
+        flush=True,
+    )
+    app.logger.warning(
+        "HowToob database connected: scheme=%s host=%s database=%s",
+        summary["scheme"],
+        summary["host"],
+        summary["database"],
+    )
+
+
+def log_database_initialization_attempt(app, attempt, attempts):
+    summary = describe_database_uri(str(app.config.get("SQLALCHEMY_DATABASE_URI") or ""))
+    print(
+        "HowToob database initialization: "
+        f"attempt={attempt}/{attempts} scheme={summary['scheme']} host={summary['host']} database={summary['database']}",
+        flush=True,
+    )
+    app.logger.warning(
+        "HowToob database initialization: attempt=%s/%s scheme=%s host=%s database=%s",
+        attempt,
+        attempts,
         summary["scheme"],
         summary["host"],
         summary["database"],
@@ -125,8 +162,10 @@ def initialize_database(app):
 
     for attempt in range(1, attempts + 1):
         try:
+            log_database_initialization_attempt(app, attempt, attempts)
             db.create_all()
             ensure_schema_updates()
+            log_database_connection_ready(app)
             return
         except SQLAlchemyError:
             db.session.rollback()
