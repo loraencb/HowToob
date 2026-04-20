@@ -32,6 +32,14 @@ services:
         value: "${howtoob-db.DATABASE_URL}"
         scope: RUN_TIME
         type: GENERAL
+      - key: DB_STARTUP_RETRIES
+        value: "10"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_STARTUP_RETRY_SECONDS
+        value: "3"
+        scope: RUN_TIME
+        type: GENERAL
       - key: SERVE_FRONTEND_BUILD
         value: "true"
         scope: RUN_TIME

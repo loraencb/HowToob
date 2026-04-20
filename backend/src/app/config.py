@@ -81,6 +81,8 @@ class Config:
         os.getenv("DATABASE_URL", "sqlite:///app.db")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DB_STARTUP_RETRIES = parse_int(os.getenv("DB_STARTUP_RETRIES"), 5)
+    DB_STARTUP_RETRY_SECONDS = parse_int(os.getenv("DB_STARTUP_RETRY_SECONDS"), 2)
 
     HOST = os.getenv("HOST", "0.0.0.0")
     PORT = int(os.getenv("PORT", "5000"))

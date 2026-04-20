@@ -208,6 +208,8 @@ PORT=8080
 DEBUG=false
 SECRET_KEY=<long-random-secret>
 DATABASE_URL=${howtoob-db.DATABASE_URL}
+DB_STARTUP_RETRIES=10
+DB_STARTUP_RETRY_SECONDS=3
 SERVE_FRONTEND_BUILD=true
 FRONTEND_DIST_DIR=/app/frontend/dist
 CORS_ALLOW_ALL_DEV=false
@@ -241,6 +243,22 @@ DigitalOcean UI.
   the deployed container.
 - The app currently creates tables on startup as a safety net. Migrations are included,
   but this MVP deployment does not require a separate migration job for a fresh database.
+
+### If deployment exits immediately
+
+Open the failed deployment, choose the `web` component, then open the runtime logs. The
+most common causes are:
+
+- `DATABASE_URL` was not bound to the PostgreSQL component. In the App Platform UI, add
+  `DATABASE_URL` with value `${howtoob-db.DATABASE_URL}` or use the database bindable
+  variable picker.
+- The PostgreSQL component is still starting. The app retries database initialization,
+  but a brand-new database can still need a redeploy once it is healthy.
+- `SECRET_KEY` was left blank. Set it to a long random secret.
+
+If the logs mention an unresolved bindable variable, the app is receiving the literal
+string `${howtoob-db.DATABASE_URL}` instead of the actual database URL. Rebind the
+database variable in DigitalOcean and redeploy.
 
 ## LAN Development
 

@@ -1,7 +1,9 @@
 from pathlib import Path
+import time
 
 from flask import Flask, jsonify, request, send_from_directory
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import SQLAlchemyError
 from .config import Config, normalize_origin
 from .extensions import db, login_manager, migrate
 
@@ -74,12 +76,51 @@ def ensure_schema_updates():
             db.session.commit()
 
 
+def validate_database_config(app):
+    database_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+    if not database_uri:
+        raise RuntimeError("DATABASE_URL is empty. Configure a database connection before starting HowToob.")
+
+    if "${" in database_uri or "}" in database_uri:
+        raise RuntimeError(
+            "DATABASE_URL still contains an unresolved DigitalOcean bindable variable. "
+            "Bind a PostgreSQL database to the web service or set DATABASE_URL to the "
+            "database component value, for example ${howtoob-db.DATABASE_URL} in the App Platform UI."
+        )
+
+
+def initialize_database(app):
+    attempts = max(1, int(app.config.get("DB_STARTUP_RETRIES", 5) or 5))
+    retry_seconds = max(1, int(app.config.get("DB_STARTUP_RETRY_SECONDS", 2) or 2))
+
+    for attempt in range(1, attempts + 1):
+        try:
+            db.create_all()
+            ensure_schema_updates()
+            return
+        except SQLAlchemyError:
+            db.session.rollback()
+            if attempt >= attempts:
+                app.logger.exception("Database initialization failed after %s attempt(s).", attempts)
+                raise
+
+            app.logger.warning(
+                "Database initialization failed on attempt %s/%s. Retrying in %s second(s).",
+                attempt,
+                attempts,
+                retry_seconds,
+                exc_info=True,
+            )
+            time.sleep(retry_seconds)
+
+
 def create_app(config_overrides=None):
     app = Flask(__name__)
     app.config.from_object(Config)
     if config_overrides:
         app.config.update(config_overrides)
 
+    validate_database_config(app)
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -154,8 +195,7 @@ def create_app(config_overrides=None):
         return db.session.get(User, int(user_id))
 
     with app.app_context():
-        db.create_all()
-        ensure_schema_updates()
+        initialize_database(app)
 
     frontend_dist_dir = Path(app.config.get("FRONTEND_DIST_DIR", ""))
     serve_frontend_build = (
