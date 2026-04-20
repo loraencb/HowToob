@@ -8,6 +8,8 @@ venv/
 .env
 .env/
 .env.*
+!.env.example
+!frontend/.env.example
 
 # VS Code
 .vscode/

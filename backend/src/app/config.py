@@ -38,6 +38,13 @@ def normalize_origin(origin):
     return normalized.rstrip("/")
 
 
+def normalize_database_url(database_url):
+    normalized = str(database_url or "").strip()
+    if normalized.startswith("postgres://"):
+        return normalized.replace("postgres://", "postgresql://", 1)
+    return normalized
+
+
 def build_cors_allowed_origins():
     origins = []
 
@@ -70,7 +77,9 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///app.db")
+    SQLALCHEMY_DATABASE_URI = normalize_database_url(
+        os.getenv("DATABASE_URL", "sqlite:///app.db")
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     HOST = os.getenv("HOST", "0.0.0.0")

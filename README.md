@@ -176,6 +176,72 @@ Upload behavior:
 
 Deleting or editing a generated quiz is still handled through the existing quiz-definition path.
 
+## DigitalOcean App Platform Deployment
+
+The simplest App Platform deployment for this repo is a single Docker web service. The
+Docker image builds the Vite frontend, copies `frontend/dist` into the Flask container,
+installs `ffmpeg`, and serves the whole app from one URL with Gunicorn.
+
+Files that support this path:
+
+- `Dockerfile`
+- `.dockerignore`
+- `.do/app.yaml`
+
+### Recommended App Platform shape
+
+- Resource type: Web Service
+- Source: GitHub repo `loraencb/HowToob`
+- Branch: `vinny-frontend-ui`
+- Build method: Dockerfile
+- Dockerfile path: `Dockerfile`
+- HTTP port: `8080`
+- Database: PostgreSQL dev database for class/demo use, or a managed PostgreSQL database for production
+
+### Required environment variables
+
+Set these on the DigitalOcean web service:
+
+```env
+HOST=0.0.0.0
+PORT=8080
+DEBUG=false
+SECRET_KEY=<long-random-secret>
+DATABASE_URL=${howtoob-db.DATABASE_URL}
+SERVE_FRONTEND_BUILD=true
+FRONTEND_DIST_DIR=/app/frontend/dist
+CORS_ALLOW_ALL_DEV=false
+SESSION_COOKIE_SECURE=true
+SESSION_COOKIE_SAMESITE=Lax
+OPENAI_API_KEY=<set as secret if AI quizzes are enabled>
+OPENAI_API_BASE_URL=https://api.openai.com/v1
+OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
+OPENAI_QUIZ_MODEL=gpt-4o-mini
+QUIZ_AI_DEFAULT_QUESTION_COUNT=10
+QUIZ_AI_AUTO_GENERATE_ON_UPLOAD=true
+QUIZ_AI_AUTO_GENERATE_QUESTION_COUNT=10
+QUIZ_AI_FFMPEG_BINARY=ffmpeg
+```
+
+`SECRET_KEY` and `OPENAI_API_KEY` should be secret variables in DigitalOcean.
+
+### App spec option
+
+You can also use `.do/app.yaml` as a starting point in the App Platform spec editor.
+Before saving it, replace the placeholder secret values with real secret values in the
+DigitalOcean UI.
+
+### Deployment limits to know
+
+- App Platform containers have ephemeral local disk. PostgreSQL should be used for app data.
+- Uploaded video files are still stored on the container filesystem in this MVP, so they
+  can disappear after redeploys/restarts. For a durable production setup, move uploaded
+  videos and thumbnails to object storage such as DigitalOcean Spaces.
+- The Dockerfile installs `ffmpeg`, so AI transcript chunking and frame sampling work in
+  the deployed container.
+- The app currently creates tables on startup as a safety net. Migrations are included,
+  but this MVP deployment does not require a separate migration job for a fresh database.
+
 ## LAN Development
 
 Use these settings when one PC is hosting the app and other devices on the same Wi-Fi need access.
