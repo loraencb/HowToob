@@ -216,8 +216,8 @@
 .bentoThumbnail img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+  object-fit: cover;
+  object-position: center;
   display: block;
   transition: transform var(--transition-normal);
 }
