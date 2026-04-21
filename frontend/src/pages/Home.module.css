@@ -533,7 +533,8 @@
 .videoGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-xl);
+  gap: 24px;
+  align-items: stretch;
 }
 
 /* Video card */

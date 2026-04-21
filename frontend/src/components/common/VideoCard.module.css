@@ -1,13 +1,26 @@
 .videoCard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  cursor: pointer;
-  transition: transform var(--transition-normal), filter var(--transition-normal);
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%),
+    var(--color-bg-secondary);
+  box-shadow: var(--shadow-sm);
+  cursor: default;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 .videoCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  border-color: rgba(var(--color-primary-rgb), 0.3);
+  box-shadow: var(--shadow-md);
   filter: saturate(1.03);
 }
 
@@ -16,25 +29,15 @@
   display: block;
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-lg);
   flex-shrink: 0;
 }
 
 .thumbnail {
   position: relative;
   width: 100%;
-  padding-top: 56.25%; /* 16:9 aspect ratio */
+  aspect-ratio: 16 / 9;
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
-  border: 1px solid var(--color-border);
   overflow: hidden;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.thumbnailLink:hover .thumbnail {
-  border-color: var(--color-border-focus);
-  box-shadow: var(--shadow-md);
 }
 
 .thumbnailImage {
@@ -147,12 +150,15 @@
 .cardInfo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  flex: 1;
+  gap: 8px;
   min-width: 0; /* Enable text truncation */
+  padding: 16px;
+  text-align: left;
 }
 
 .cardTitle {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-light);
   line-height: var(--line-height-normal);
@@ -170,7 +176,7 @@
 }
 
 .cardCreator {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   text-decoration: none;
   transition: color var(--transition-fast);
@@ -183,13 +189,14 @@
 .cardMeta {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
 .tierMeta {
-  margin: 0;
+  margin: auto 0 0;
   font-size: var(--font-size-xs);
   line-height: 1.45;
   color: rgba(246, 200, 110, 0.92);
@@ -206,9 +213,7 @@
 /* Text Only Layout Modifier */
 .textOnlyCard {
   background: linear-gradient(180deg, rgba(29, 52, 83, 0.96), rgba(22, 41, 68, 0.98));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-xl);
+  padding: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
