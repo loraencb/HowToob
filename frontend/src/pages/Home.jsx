@@ -75,18 +75,16 @@ function PlayOverlay() {
 function ThumbnailFallback({ primary = false }) {
   return (
     <div className={styles.bentoPlaceholder} aria-hidden="true">
-      <div className={styles.bentoPlaceholder}>
-        <svg
-          width={primary ? 48 : 32}
-          height={primary ? 48 : 32}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        >
-          <polygon points="5 3 19 12 5 21 5 3" />
-        </svg>
-      </div>
+      <svg
+        width={primary ? 48 : 32}
+        height={primary ? 48 : 32}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <polygon points="5 3 19 12 5 21 5 3" />
+      </svg>
     </div>
   )
 }
@@ -100,12 +98,6 @@ function ThumbnailArtwork({ video, primary = false, showPlay = false }) {
 
   return (
     <>
-      <img
-        src={video.thumbnail_url}
-        alt=""
-        aria-hidden="true"
-        className={styles.thumbnailBackdrop}
-      />
       <img
         src={video.thumbnail_url}
         alt={title}
@@ -124,17 +116,20 @@ function normalizeFeedResponse(data) {
   return []
 }
 
-function BentoLessonCard({ video, primary = false }) {
+function BentoLessonCard({ video, primary = false, tiered = false, label = null }) {
   if (!video) return null
 
   const ratingCount = video.rating_count ?? video.like_count ?? 0
   const createdAt = video.created_at || null
+  const cardClass = primary
+    ? styles.bentoPrimary
+    : tiered
+      ? styles.bentoTiered
+      : styles.bentoSecondary
 
   return (
-    <article
-      className={`${styles.bentoCard} ${primary ? styles.bentoPrimary : styles.bentoSecondary}`}
-    >
-      <div className={styles.bentoLabel}>{getLessonBadgeLabel(video)}</div>
+    <article className={`${styles.bentoCard} ${cardClass}`}>
+      <div className={styles.bentoLabel}>{label || getLessonBadgeLabel(video)}</div>
       <Link to={`/watch/${video.id}`} className={styles.bentoLink}>
         <div className={styles.bentoThumbnail}>
           <ThumbnailArtwork video={video} primary={primary} showPlay={Boolean(video.id)} />
@@ -206,11 +201,6 @@ export default function Home() {
     fetchVideos(1, true)
   }, [fetchVideos])
 
-  const activeCategoryMeta = useMemo(
-    () => getCategoryMetadata(activeCategory),
-    [activeCategory]
-  )
-
   const filteredVideos = useMemo(() => {
     if (!activeCategory) return videos
     return videos.filter((video) => matchesCategoryFilter(video.category, activeCategory))
@@ -228,15 +218,15 @@ export default function Home() {
     return groupVideosByCategory(remainingVideos)
   }, [activeCategory, remainingVideos])
 
-  const homeHeading = activeCategory
-    ? activeCategoryMeta.pathLabel || activeCategoryMeta.label || 'Selected learning path'
-    : 'Structured learning feed'
+  const categorizedVideoIds = useMemo(
+    () => new Set(categorySections.flatMap((section) => section.videos.map((video) => video.id))),
+    [categorySections]
+  )
 
-  const homeDescription = activeCategory
-    ? `Showing ${filteredVideos.length} lesson${
-        filteredVideos.length === 1 ? '' : 's'
-      } in this selected path. Creators assign these labels directly when they publish.`
-    : 'Browse the lesson library through creator-assigned categories and curated learning shelves.'
+  const exploreVideos = useMemo(() => {
+    if (activeCategory) return remainingVideos
+    return remainingVideos.filter((video) => !categorizedVideoIds.has(video.id))
+  }, [activeCategory, categorizedVideoIds, remainingVideos])
 
   function handleLoadMore() {
     if (!loadingMore && hasMore) {
@@ -260,23 +250,20 @@ export default function Home() {
           <ErrorMessage message={error} onRetry={() => fetchVideos(1, true)} />
         ) : (
           <>
+            {featuredVideos.length > 0 ? (
             <div className={styles.bentoGrid}>
               <div
                 className={`${styles.bentoCard} ${styles.bentoPrimary}`}
                 aria-label="Continue Learning"
               >
                 {(() => {
-                  const v = featuredVideos[0] || {
-                    title: 'Welcome: Platform Overview',
-                    views: 0,
-                    created_at: new Date().toISOString(),
-                  }
+                  const v = featuredVideos[0]
 
                   return (
                     <>
                       <div className={styles.bentoLabel}>Continue Learning</div>
                       <Link
-                        to={v.id ? `/watch/${v.id}` : '#'}
+                        to={`/watch/${v.id}`}
                         className={styles.bentoLink}
                       >
                         <div className={styles.bentoThumbnail}>
@@ -300,56 +287,19 @@ export default function Home() {
                 })()}
               </div>
 
-              {[featuredVideos[1], featuredVideos[2]].map((video, idx) => {
-                const v = video || { title: `New Upload: Series ${idx + 1}` }
+              {featuredVideos.slice(1, 3).map((video) => (
+                <BentoLessonCard key={video.id} video={video} label="New Upload" />
+              ))}
 
-                return (
-                  <div
-                    key={v.id ?? `ghost-new-${idx}`}
-                    className={`${styles.bentoCard} ${styles.bentoSecondary}`}
-                    aria-label={`New Upload ${idx + 1}`}
-                    style={{ cursor: 'default' }}
-                  >
-                    <div className={styles.bentoLabel}>New Upload</div>
-                    <div className={styles.bentoLink}>
-                      <div className={styles.bentoThumbnail}>
-                        <ThumbnailArtwork video={v} showPlay={Boolean(v.id)} />
-                      </div>
-                      <div className={styles.bentoTitle}>
-                        {truncate(cleanTitle(v.title), 60)}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-
-              {[featuredVideos[3], featuredVideos[4]].map((video, idx) => {
-                const v = video || { title: `Premium Features: Spotlight ${idx + 1}` }
-
-                return (
-                  <div
-                    key={v.id ?? `ghost-tier-${idx}`}
-                    className={`${styles.bentoCard} ${styles.bentoTiered}`}
-                    aria-label={`Tiered Content ${idx + 1}`}
-                    style={{ cursor: 'default' }}
-                  >
-                    <div className={styles.bentoLabel}>
-                      {getCardBadgeLabel(v.title, 'Tier 1')}
-                    </div>
-                    <div className={styles.bentoLink}>
-                      <div className={styles.bentoThumbnail}>
-                        <ThumbnailArtwork video={v} showPlay={Boolean(v.id)} />
-                      </div>
-                      <div className={styles.bentoTitle}>
-                        {truncate(cleanTitle(v.title), 60)}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+              {featuredVideos.slice(3, 5).map((video) => (
+                <BentoLessonCard key={video.id} video={video} tiered />
+              ))}
             </div>
+            ) : null}
 
-            {Object.entries(categorySections).map(([categoryName, categoryVideos], sectionIdx) => {
+            {categorySections.map((section, sectionIdx) => {
+              const categoryName = section.label
+              const categoryVideos = section.videos
               const alternateLayout = (sectionIdx + 1) % 2 !== 0
               const topVideo = categoryVideos[0]
               const otherVideos = categoryVideos.slice(1, 5)
@@ -359,7 +309,7 @@ export default function Home() {
                   <div className={styles.categoryHeader}>
                     <h2 className={styles.categoryTitle}>{categoryName}</h2>
                     <Link
-                      to={`/search?category=${encodeURIComponent(categoryName)}`}
+                      to={`/search?category=${encodeURIComponent(section.value)}`}
                       className={styles.categoryViewAll}
                     >
                       View all →
@@ -372,11 +322,7 @@ export default function Home() {
                     }`}
                   >
                     {(() => {
-                      const v = topVideo || {
-                        title: getPlaceholderTitle(categoryName, 0),
-                        views: 0,
-                        created_at: new Date().toISOString(),
-                      }
+                      const v = topVideo
 
                       return (
                         <div
@@ -384,7 +330,7 @@ export default function Home() {
                           style={{ cursor: 'default' }}
                         >
                           <div className={styles.bentoLabel}>Most Popular</div>
-                          <div className={styles.bentoLink}>
+                          <Link to={`/watch/${v.id}`} className={styles.bentoLink}>
                             <div className={styles.bentoThumbnail}>
                               <ThumbnailArtwork video={v} primary showPlay={Boolean(v.id)} />
                             </div>
@@ -400,71 +346,37 @@ export default function Home() {
                                 {formatNumericDate(v.created_at || new Date().toISOString())}
                               </span>
                             </div>
-                          </div>
+                          </Link>
                         </div>
                       )
                     })()}
 
-                    {Array.from({ length: 4 }).map((_, i) => {
-                      const video = otherVideos[i]
-                      const cardClass = i < 2 ? styles.bentoSecondary : styles.bentoTiered
-                      const v = video || {
-                        title: getPlaceholderTitle(categoryName, i + 1),
-                      }
-
-                      return (
-                        <div
-                          key={v.id ?? `cat-${categoryName}-ghost-${i}`}
-                          className={`${styles.bentoCard} ${cardClass}`}
-                          style={{ cursor: 'default' }}
-                        >
-                          <div className={styles.bentoLabel}>
-                            {getCardBadgeLabel(v.title, i < 2 ? 'New Upload' : 'Tier 1')}
-                          </div>
-                          <div className={styles.bentoLink}>
-                            <div className={styles.bentoThumbnail}>
-                              <ThumbnailArtwork video={v} showPlay={Boolean(v.id)} />
-                            </div>
-                            <div className={styles.bentoTitle}>
-                              {truncate(cleanTitle(v.title), 60)}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {otherVideos.map((video, i) => (
+                      <BentoLessonCard
+                        key={video.id}
+                        video={video}
+                        tiered={i >= 2}
+                      />
+                    ))}
                   </div>
                 </section>
               )
             })}
 
-            {featuredVideos.length > 5 && (
+            {exploreVideos.length > 0 && (
               <div className={styles.bentoFooter}>
                 <h2 className={styles.sectionTitle}>Explore More</h2>
                 <div className={styles.videoGrid}>
-                  {featuredVideos.slice(5).map((video, index) => (
+                  {exploreVideos.map((video) => (
                     <VideoCard
                       key={video.id}
                       video={{
                         ...video,
                         title: cleanTitle(video.title),
-                        views: EXPLORE_MORE_VIEW_COUNTS[index] ?? video.views,
                       }}
                       textOnly={true}
                     />
                   ))}
-
-                  <VideoCard
-                    key="explore-placeholder"
-                    video={{
-                      id: 'placeholder',
-                      title: 'React Fundamentals',
-                      creator: { username: 'Creator #1' },
-                      views:
-                        EXPLORE_MORE_VIEW_COUNTS[featuredVideos.slice(5).length] ?? 451,
-                      created_at: new Date().toISOString(),
-                    }}
-                    textOnly={true}
-                  />
                 </div>
               </div>
             )}
@@ -481,7 +393,7 @@ export default function Home() {
                   type="button"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className={styles.loadMoreButton}
+                  className={styles.loadMoreBtn}
                 >
                   {loadingMore ? 'Loading…' : 'Load More'}
                 </button>
