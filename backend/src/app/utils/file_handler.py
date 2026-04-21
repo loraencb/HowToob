@@ -162,7 +162,10 @@ def delete_stored_file(storage_path):
 
     local_path = Path(str(storage_path)).expanduser()
     if local_path.exists() and local_path.is_file():
-        local_path.unlink()
+        try:
+            local_path.unlink()
+        except OSError as exc:
+            raise StorageError(f"Could not delete local media file: {exc}") from exc
 
 
 @contextmanager

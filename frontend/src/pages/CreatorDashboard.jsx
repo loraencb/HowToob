@@ -45,6 +45,7 @@ export default function CreatorDashboard() {
     category: '',
     learningLevel: '',
     accessTier: '0',
+    thumbnailFile: null,
   })
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -137,6 +138,7 @@ export default function CreatorDashboard() {
         : '',
       learningLevel: video.learning_level || '',
       accessTier: String(video.access_tier ?? video.tier_level ?? video.subscription?.tier_level ?? 0),
+      thumbnailFile: null,
     })
     setActionMessage('')
     setActionError('')
@@ -151,6 +153,7 @@ export default function CreatorDashboard() {
       category: '',
       learningLevel: '',
       accessTier: '0',
+      thumbnailFile: null,
     })
   }
 
@@ -178,18 +181,33 @@ export default function CreatorDashboard() {
     setActionMessage('')
 
     try {
-      const updated = await videosAPI.update(videoId, {
+      const payload = editForm.thumbnailFile ? new FormData() : {
         title,
         description: editForm.description.trim(),
         category: editForm.category || editForm.primaryCategory || '',
         learning_level: editForm.learningLevel || null,
         access_tier: editForm.accessTier,
-      })
+      }
+
+      if (payload instanceof FormData) {
+        payload.append('title', title)
+        payload.append('description', editForm.description.trim())
+        payload.append('category', editForm.category || editForm.primaryCategory || '')
+        payload.append('learning_level', editForm.learningLevel || '')
+        payload.append('access_tier', editForm.accessTier)
+        payload.append('thumbnail', editForm.thumbnailFile)
+      }
+
+      const updated = await videosAPI.update(videoId, payload)
 
       setVideos((prev) =>
         prev.map((video) => (video.id === videoId ? { ...video, ...updated } : video))
       )
-      setActionMessage('Lesson details updated.')
+      setActionMessage(
+        editForm.thumbnailFile
+          ? 'Lesson details and thumbnail updated.'
+          : 'Lesson details updated.'
+      )
       handleCancelEdit()
     } catch (requestError) {
       setActionError(requestError.message || 'Could not save your lesson changes.')
@@ -851,6 +869,36 @@ export default function CreatorDashboard() {
                               </option>
                             ))}
                           </select>
+                        </label>
+
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            Thumbnail
+                          </span>
+                          <input
+                            type="file"
+                            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+                            onChange={(event) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                thumbnailFile: event.target.files?.[0] || null,
+                              }))
+                            }
+                            style={{
+                              width: '100%',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--color-border)',
+                              background: 'rgba(14, 33, 56, 0.88)',
+                              color: 'var(--color-text-light)',
+                              font: 'inherit',
+                              padding: '0.95rem 1rem',
+                            }}
+                          />
+                          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                            {editForm.thumbnailFile
+                              ? `Selected thumbnail: ${editForm.thumbnailFile.name}`
+                              : 'Leave empty to keep the current thumbnail.'}
+                          </span>
                         </label>
 
                         <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>

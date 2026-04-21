@@ -33,6 +33,9 @@ def register():
 def login():
     data = request.get_json() or {}
 
+    if current_user.is_authenticated:
+        logout_user()
+
     required_fields = ["email", "password"]
     missing = [field for field in required_fields if field not in data]
     if missing:

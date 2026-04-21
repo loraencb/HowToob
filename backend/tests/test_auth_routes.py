@@ -53,6 +53,24 @@ def test_login_invalid_password(client):
     assert response.get_json()["error"] == "Invalid email or password"
 
 
+def test_failed_login_clears_existing_session(client):
+    first_login = client.post("/auth/login", json={
+        "email": "test1@example.com",
+        "password": "password123",
+    })
+    assert first_login.status_code == 200
+
+    failed_login = client.post("/auth/login", json={
+        "email": "test2@example.com",
+        "password": "wrongpassword",
+    })
+
+    assert failed_login.status_code == 401
+    me_response = client.get("/auth/me")
+    assert me_response.status_code == 401
+    assert me_response.get_json()["authenticated"] is False
+
+
 def test_me_authenticated(client):
     client.post("/auth/login", json={
         "email": "test1@example.com",

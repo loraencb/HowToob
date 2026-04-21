@@ -126,7 +126,7 @@ export default function Login() {
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Logging in…' : 'Log in'}
+            {loading ? 'Logging in...' : 'Log in'}
           </Button>
         </form>
 

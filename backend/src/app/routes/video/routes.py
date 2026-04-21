@@ -6,6 +6,7 @@ from ...utils.file_handler import (
     StorageError,
     allowed_file,
     build_storage_access_url,
+    delete_stored_file,
     is_remote_storage_path,
     save_file,
 )
@@ -228,20 +229,49 @@ def update_video(video_id):
     if video.creator_id != current_user.id:
         return jsonify({"error": "You can only update your own videos"}), 403
 
-    data = request.get_json() or {}
+    is_multipart = request.mimetype == "multipart/form-data"
+    data = request.form if is_multipart else (request.get_json(silent=True) or {})
+    thumbnail_file = request.files.get("thumbnail") if is_multipart else None
+    thumbnail_path = data.get("thumbnail_path")
+    old_thumbnail_path = video.thumbnail_path
+    saved_thumbnail_path = None
+
+    if thumbnail_file and thumbnail_file.filename:
+        if not allowed_file(thumbnail_file.filename, ALLOWED_IMAGE_EXTENSIONS):
+            return jsonify({"error": "Invalid thumbnail format"}), 400
+
+        saved_thumbnail_path, err = save_file(
+            thumbnail_file,
+            current_app.config["THUMBNAIL_UPLOAD_FOLDER"],
+        )
+        if err:
+            return jsonify({"error": err}), 400
+        thumbnail_path = saved_thumbnail_path
+
     try:
         updated = VideoService.update_video(
             video,
             title=data.get("title"),
             description=data.get("description"),
-            thumbnail_path=data.get("thumbnail_path"),
+            thumbnail_path=thumbnail_path,
             category=data.get("category"),
             learning_level=data.get("learning_level"),
             access_tier=data.get("access_tier"),
             is_published=data.get("is_published"),
         )
     except ValueError as exc:
+        if saved_thumbnail_path:
+            try:
+                delete_stored_file(saved_thumbnail_path)
+            except StorageError:
+                pass
         return jsonify({"error": str(exc)}), 400
+
+    if saved_thumbnail_path and old_thumbnail_path and old_thumbnail_path != saved_thumbnail_path:
+        try:
+            delete_stored_file(old_thumbnail_path)
+        except StorageError:
+            pass
 
     return jsonify(updated.to_dict(viewer_id=current_user.id)), 200
 

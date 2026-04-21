@@ -165,7 +165,7 @@ export const videosAPI = {
     request('POST', '/videos/upload', formData, true),
 
   update: (videoId, data) =>
-    request('PUT', `/videos/${videoId}`, data),
+    request('PUT', `/videos/${videoId}`, data, data instanceof FormData),
 
   delete: (videoId) =>
     request('DELETE', `/videos/${videoId}`),

@@ -95,6 +95,41 @@ def test_update_video(auth_client):
     assert data["description"] == "New description"
 
 
+def test_update_video_can_replace_thumbnail(auth_client):
+    auth_client.application.config["QUIZ_AI_AUTO_GENERATE_ON_UPLOAD"] = False
+    auth_client.application.config["OPENAI_API_KEY"] = ""
+
+    upload_response = auth_client.post(
+        "/videos/upload",
+        data={
+            "title": "Thumbnail Update",
+            "description": "Original thumbnail",
+            "video": (io.BytesIO(b"fake video"), "thumb-update.mp4"),
+            "thumbnail": (io.BytesIO(b"old image"), "old-thumb.jpg"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert upload_response.status_code == 201
+    created = upload_response.get_json()
+
+    update_response = auth_client.put(
+        f"/videos/{created['id']}",
+        data={
+            "title": "Thumbnail Updated",
+            "description": "New thumbnail",
+            "thumbnail": (io.BytesIO(b"new image"), "new-thumb.png"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    assert update_response.status_code == 200
+    updated = update_response.get_json()
+    assert updated["title"] == "Thumbnail Updated"
+    assert updated["description"] == "New thumbnail"
+    assert updated["thumbnail_url"] is not None
+    assert updated["thumbnail_url"] != created["thumbnail_url"]
+
+
 def test_delete_video(auth_client):
     create_response = auth_client.post("/videos/", json={
         "title": "Delete Me",

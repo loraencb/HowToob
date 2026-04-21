@@ -52,6 +52,11 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(true)
       return data.user
     } catch (error) {
+      if (error?.status === 401) {
+        setUser(null)
+        setIsAuthenticated(false)
+      }
+
       if (error?.status !== 401) {
         setAuthError(
           error?.message ||
