@@ -202,29 +202,58 @@
   width: 100%;
   flex: 1;
   min-height: 180px;
-  background-color: var(--color-bg-elevated);
+  background:
+    radial-gradient(circle at center, rgba(var(--color-primary-rgb), 0.2), transparent 55%),
+    var(--color-bg-elevated);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  isolation: isolate;
 }
 
 .bentoPrimary .bentoThumbnail {
   min-height: 350px;
 }
 
-.bentoThumbnail img {
-  width: 100%;
-  height: 100%;
+.thumbnailBackdrop,
+.thumbnailImage {
+  display: block;
+}
+
+.thumbnailBackdrop {
+  position: absolute;
+  inset: -12%;
+  width: 124%;
+  height: 124%;
   object-fit: cover;
   object-position: center;
-  display: block;
+  filter: blur(18px) saturate(1.08);
+  opacity: 0.46;
+  transform: scale(1.05);
+  z-index: 0;
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
+}
+
+.thumbnailImage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  z-index: 1;
   transition: transform var(--transition-normal);
 }
 
-.bentoThumbnail:hover img,
-.bentoLink:focus-visible .bentoThumbnail img {
+.bentoThumbnail:hover .thumbnailImage,
+.bentoLink:focus-visible .bentoThumbnail .thumbnailImage {
   transform: scale(1.03);
+}
+
+.bentoThumbnail:hover .thumbnailBackdrop,
+.bentoLink:focus-visible .bentoThumbnail .thumbnailBackdrop {
+  opacity: 0.58;
+  transform: scale(1.09);
 }
 
 .playOverlay {
@@ -235,6 +264,7 @@
   justify-content: center;
   pointer-events: none;
   opacity: 0;
+  z-index: 3;
   transition: opacity var(--transition-fast);
 }
 

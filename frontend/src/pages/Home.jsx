@@ -91,6 +91,31 @@ function ThumbnailFallback({ primary = false }) {
   )
 }
 
+function ThumbnailArtwork({ video, primary = false, showPlay = false }) {
+  if (!video?.thumbnail_url) {
+    return <ThumbnailFallback primary={primary} />
+  }
+
+  const title = video.title || 'Lesson thumbnail'
+
+  return (
+    <>
+      <img
+        src={video.thumbnail_url}
+        alt=""
+        aria-hidden="true"
+        className={styles.thumbnailBackdrop}
+      />
+      <img
+        src={video.thumbnail_url}
+        alt={title}
+        className={styles.thumbnailImage}
+      />
+      {showPlay ? <PlayOverlay /> : null}
+    </>
+  )
+}
+
 function normalizeFeedResponse(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.results)) return data.results
@@ -112,14 +137,7 @@ function BentoLessonCard({ video, primary = false }) {
       <div className={styles.bentoLabel}>{getLessonBadgeLabel(video)}</div>
       <Link to={`/watch/${video.id}`} className={styles.bentoLink}>
         <div className={styles.bentoThumbnail}>
-          {video.thumbnail_url ? (
-            <>
-              <img src={video.thumbnail_url} alt={video.title} />
-              <PlayOverlay />
-            </>
-          ) : (
-            <ThumbnailFallback primary={primary} />
-          )}
+          <ThumbnailArtwork video={video} primary={primary} showPlay={Boolean(video.id)} />
         </div>
 
         <div className={styles.bentoTitle}>
@@ -262,14 +280,7 @@ export default function Home() {
                         className={styles.bentoLink}
                       >
                         <div className={styles.bentoThumbnail}>
-                          {v.thumbnail_url ? (
-                            <>
-                              <img src={v.thumbnail_url} alt={v.title} />
-                              {v.id && <PlayOverlay />}
-                            </>
-                          ) : (
-                            <ThumbnailFallback primary={true} />
-                          )}
+                          <ThumbnailArtwork video={v} primary showPlay={Boolean(v.id)} />
                         </div>
                         <div className={styles.bentoTitle}>
                           {truncate(cleanTitle(v.title), 80)}
@@ -302,14 +313,7 @@ export default function Home() {
                     <div className={styles.bentoLabel}>New Upload</div>
                     <div className={styles.bentoLink}>
                       <div className={styles.bentoThumbnail}>
-                        {v.thumbnail_url ? (
-                          <>
-                            <img src={v.thumbnail_url} alt={v.title} />
-                            {v.id && <PlayOverlay />}
-                          </>
-                        ) : (
-                          <ThumbnailFallback primary={false} />
-                        )}
+                        <ThumbnailArtwork video={v} showPlay={Boolean(v.id)} />
                       </div>
                       <div className={styles.bentoTitle}>
                         {truncate(cleanTitle(v.title), 60)}
@@ -334,14 +338,7 @@ export default function Home() {
                     </div>
                     <div className={styles.bentoLink}>
                       <div className={styles.bentoThumbnail}>
-                        {v.thumbnail_url ? (
-                          <>
-                            <img src={v.thumbnail_url} alt={v.title} />
-                            {v.id && <PlayOverlay />}
-                          </>
-                        ) : (
-                          <ThumbnailFallback primary={false} />
-                        )}
+                        <ThumbnailArtwork video={v} showPlay={Boolean(v.id)} />
                       </div>
                       <div className={styles.bentoTitle}>
                         {truncate(cleanTitle(v.title), 60)}
@@ -389,14 +386,7 @@ export default function Home() {
                           <div className={styles.bentoLabel}>Most Popular</div>
                           <div className={styles.bentoLink}>
                             <div className={styles.bentoThumbnail}>
-                              {v.thumbnail_url ? (
-                                <>
-                                  <img src={v.thumbnail_url} alt={v.title} />
-                                  {v.id && <PlayOverlay />}
-                                </>
-                              ) : (
-                                <ThumbnailFallback primary={true} />
-                              )}
+                              <ThumbnailArtwork video={v} primary showPlay={Boolean(v.id)} />
                             </div>
                             <div className={styles.bentoTitle}>
                               {truncate(cleanTitle(v.title), 80)}
@@ -433,14 +423,7 @@ export default function Home() {
                           </div>
                           <div className={styles.bentoLink}>
                             <div className={styles.bentoThumbnail}>
-                              {v.thumbnail_url ? (
-                                <>
-                                  <img src={v.thumbnail_url} alt={v.title} />
-                                  {v.id && <PlayOverlay />}
-                                </>
-                              ) : (
-                                <ThumbnailFallback primary={false} />
-                              )}
+                              <ThumbnailArtwork video={v} showPlay={Boolean(v.id)} />
                             </div>
                             <div className={styles.bentoTitle}>
                               {truncate(cleanTitle(v.title), 60)}
