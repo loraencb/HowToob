@@ -117,7 +117,13 @@ def save_file(file, folder):
 
     unique_name = f"{uuid.uuid4().hex}.{ext}"
     if get_storage_backend() == "spaces":
-        media_type = "videos" if "video" in str(folder).replace("\\", "/") else "thumbnails"
+        normalized_folder = str(folder).replace("\\", "/").lower()
+        if "video" in normalized_folder:
+            media_type = "videos"
+        elif "profile" in normalized_folder or "avatar" in normalized_folder:
+            media_type = "profile-pictures"
+        else:
+            media_type = "thumbnails"
         try:
             return _save_file_to_spaces(file, unique_name, media_type), None
         except StorageError as exc:

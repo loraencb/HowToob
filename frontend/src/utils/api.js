@@ -219,6 +219,12 @@ export const usersAPI = {
   getMyRatings: (limit = null) =>
     request('GET', `/users/me/ratings${buildQuery({ limit })}`),
 
+  updateProfilePicture: (formData) =>
+    request('PUT', '/users/me/profile-picture', formData, true),
+
+  deleteProfilePicture: () =>
+    request('DELETE', '/users/me/profile-picture'),
+
   getProfile: (identifier) =>
     request('GET', `/users/profile/${encodeURIComponent(identifier)}`),
 }

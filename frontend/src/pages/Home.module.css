@@ -216,12 +216,15 @@
 .bentoThumbnail img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+  display: block;
   transition: transform var(--transition-normal);
 }
 
-.bentoCard:hover .bentoThumbnail img {
-  transform: scale(1.08);
+.bentoThumbnail:hover img,
+.bentoLink:focus-visible .bentoThumbnail img {
+  transform: scale(1.03);
 }
 
 .playOverlay {
@@ -231,6 +234,13 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.bentoThumbnail:hover .playOverlay,
+.bentoLink:focus-visible .playOverlay {
+  opacity: 1;
 }
 
 .playButton {
@@ -255,7 +265,8 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
-.bentoCard:hover .playButton {
+.bentoThumbnail:hover .playButton,
+.bentoLink:focus-visible .playButton {
   background: var(--gradient-primary);
   color: #fff;
   border-color: rgba(var(--color-accent-rgb), 0.55);

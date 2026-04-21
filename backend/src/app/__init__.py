@@ -13,6 +13,9 @@ SCHEMA_PATCHES = {
             "alter_sql": "ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'viewer'",
             "backfill_sql": "UPDATE users SET role = 'viewer' WHERE role IS NULL OR TRIM(role) = ''",
         },
+        "profile_image_path": {
+            "alter_sql": "ALTER TABLE users ADD COLUMN profile_image_path VARCHAR(255)",
+        },
     },
     "subscriptions": {
         "tier_level": {

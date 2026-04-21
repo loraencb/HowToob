@@ -268,7 +268,7 @@ export default function Home() {
                               {v.id && <PlayOverlay />}
                             </>
                           ) : (
-                            <ThumbnailPlaceholder primary={true} />
+                            <ThumbnailFallback primary={true} />
                           )}
                         </div>
                         <div className={styles.bentoTitle}>
@@ -308,7 +308,7 @@ export default function Home() {
                             {v.id && <PlayOverlay />}
                           </>
                         ) : (
-                          <ThumbnailPlaceholder primary={false} />
+                          <ThumbnailFallback primary={false} />
                         )}
                       </div>
                       <div className={styles.bentoTitle}>
@@ -340,7 +340,7 @@ export default function Home() {
                             {v.id && <PlayOverlay />}
                           </>
                         ) : (
-                          <ThumbnailPlaceholder primary={false} />
+                          <ThumbnailFallback primary={false} />
                         )}
                       </div>
                       <div className={styles.bentoTitle}>
@@ -395,7 +395,7 @@ export default function Home() {
                                   {v.id && <PlayOverlay />}
                                 </>
                               ) : (
-                                <ThumbnailPlaceholder primary={true} />
+                                <ThumbnailFallback primary={true} />
                               )}
                             </div>
                             <div className={styles.bentoTitle}>
@@ -439,7 +439,7 @@ export default function Home() {
                                   {v.id && <PlayOverlay />}
                                 </>
                               ) : (
-                                <ThumbnailPlaceholder primary={false} />
+                                <ThumbnailFallback primary={false} />
                               )}
                             </div>
                             <div className={styles.bentoTitle}>

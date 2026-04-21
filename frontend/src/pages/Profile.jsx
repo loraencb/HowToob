@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import VideoCard from '../components/common/VideoCard'
+import Avatar from '../components/common/Avatar'
 import ErrorMessage from '../components/common/ErrorMessage'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import { useAuth } from '../context/AuthContext'
 import { usePlaylists } from '../context/PlaylistContext'
 import { useProgress } from '../context/ProgressContext'
 import { usersAPI } from '../utils/api'
-import { formatNumericDate, getInitials } from '../utils/formatters'
+import { formatNumericDate } from '../utils/formatters'
 import styles from './Profile.module.css'
 
 function getRoleLabel(role, hasVideos) {
@@ -41,6 +42,8 @@ export default function Profile() {
     id: null,
     username: requestedIdentity,
     role: null,
+    avatar_url: null,
+    profile_image_url: null,
     source: 'route',
   })
 
@@ -64,6 +67,8 @@ export default function Profile() {
           id: profile.id ?? null,
           username: profile.username || requestedIdentity,
           role: profile.role || null,
+          avatar_url: profile.avatar_url || profile.profile_image_url || null,
+          profile_image_url: profile.profile_image_url || profile.avatar_url || null,
           source: 'backend-profile',
         })
         setProfileSummary(data?.summary || null)
@@ -76,6 +81,8 @@ export default function Profile() {
           id: isCurrentUser ? user?.id ?? null : null,
           username: isCurrentUser ? user?.username || requestedIdentity : requestedIdentity,
           role: isCurrentUser ? user?.role || null : null,
+          avatar_url: isCurrentUser ? user?.avatar_url || user?.profile_image_url || null : null,
+          profile_image_url: isCurrentUser ? user?.profile_image_url || user?.avatar_url || null : null,
           source: isCurrentUser ? 'auth' : 'route-name',
         })
         setError(requestError.message || 'Could not load this creator profile.')
@@ -187,7 +194,11 @@ export default function Profile() {
     <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.identity}>
-          <div className={styles.avatar}>{getInitials(resolvedProfile.username || 'Profile')}</div>
+          <Avatar
+            user={resolvedProfile}
+            size="xl"
+            className={styles.profileAvatar}
+          />
           <div className={styles.identityCopy}>
             <p className={styles.eyebrow}>
               {isCurrentUser ? 'Your profile' : 'Creator profile'}

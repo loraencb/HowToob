@@ -9,6 +9,7 @@ import styles from './Avatar.module.css'
 export default function Avatar({ user, size = 'md', tier, className = '' }) {
   const name = user?.username || user?.name || 'User'
   const initials = getInitials(name)
+  const imageUrl = user?.avatar_url || user?.profile_image_url || ''
 
   return (
     <div
@@ -21,8 +22,8 @@ export default function Avatar({ user, size = 'md', tier, className = '' }) {
       aria-label={`${name}'s avatar`}
       title={name}
     >
-      {user?.avatar_url ? (
-        <img src={user.avatar_url} alt={`${name}'s profile picture`} />
+      {imageUrl ? (
+        <img src={imageUrl} alt={`${name}'s profile picture`} />
       ) : (
         <span className={styles.initials} aria-hidden="true">
           {initials}

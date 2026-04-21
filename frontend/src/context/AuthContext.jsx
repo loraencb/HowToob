@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { authAPI } from '../utils/api'
+import { authAPI, usersAPI } from '../utils/api'
 
 const AuthContext = createContext(null)
 
@@ -84,6 +84,27 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function updateProfilePicture(file) {
+    const formData = new FormData()
+    formData.append('profile_picture', file)
+
+    const data = await usersAPI.updateProfilePicture(formData)
+    const nextUser = data.user
+    setUser(nextUser)
+    setIsAuthenticated(true)
+    setAuthError('')
+    return nextUser
+  }
+
+  async function removeProfilePicture() {
+    const data = await usersAPI.deleteProfilePicture()
+    const nextUser = data.user
+    setUser(nextUser)
+    setIsAuthenticated(true)
+    setAuthError('')
+    return nextUser
+  }
+
   function clearAuthError() {
     setAuthError('')
   }
@@ -102,6 +123,8 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateProfilePicture,
+    removeProfilePicture,
     checkAuth,
     clearAuthError,
   }

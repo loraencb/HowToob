@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import Avatar from '../components/common/Avatar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import { useAuth } from '../context/AuthContext'
@@ -45,20 +46,38 @@ function getRoleLabel(role) {
   return 'Explorer'
 }
 
+function buildAccountSnapshot(source = {}, fallback = {}) {
+  return {
+    username: source?.username || fallback?.username || '',
+    email: source?.email || fallback?.email || '',
+    role: source?.role || fallback?.role || 'viewer',
+    avatar_url:
+      source?.avatar_url ||
+      source?.profile_image_url ||
+      fallback?.avatar_url ||
+      fallback?.profile_image_url ||
+      null,
+    profile_image_url:
+      source?.profile_image_url ||
+      source?.avatar_url ||
+      fallback?.profile_image_url ||
+      fallback?.avatar_url ||
+      null,
+  }
+}
+
 export default function Settings() {
-  const { user } = useAuth()
+  const { user, updateProfilePicture, removeProfilePicture } = useAuth()
   const [preferences, savePreferences] = useLocalPreferences()
   const reports = useLocalReports()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [profilePictureSaving, setProfilePictureSaving] = useState(false)
+  const [profilePictureFile, setProfilePictureFile] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [account, setAccount] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    role: user?.role || 'viewer',
-  })
+  const [account, setAccount] = useState(() => buildAccountSnapshot(user))
   const [form, setForm] = useState(preferences)
 
   useEffect(() => {
@@ -78,20 +97,12 @@ export default function Settings() {
 
         if (!active) return
 
-        setAccount({
-          username: resolvedUser?.username || user?.username || '',
-          email: resolvedUser?.email || user?.email || '',
-          role: resolvedUser?.role || user?.role || 'viewer',
-        })
+        setAccount(buildAccountSnapshot(resolvedUser, user))
       } catch (requestError) {
         if (!active) return
 
         if (user) {
-          setAccount({
-            username: user.username || '',
-            email: user.email || '',
-            role: user.role || 'viewer',
-          })
+          setAccount(buildAccountSnapshot(user))
         } else {
           setError(requestError.message || 'Failed to load account settings.')
         }
@@ -126,6 +137,55 @@ export default function Settings() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
+  }
+
+  function handleProfilePictureChange(event) {
+    const file = event.target.files?.[0] || null
+    setProfilePictureFile(file)
+    setError('')
+    setSuccess('')
+  }
+
+  async function handleProfilePictureSubmit(event) {
+    event.preventDefault()
+
+    if (!profilePictureFile) {
+      setError('Choose a PNG or JPG profile picture first.')
+      setSuccess('')
+      return
+    }
+
+    setProfilePictureSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const nextUser = await updateProfilePicture(profilePictureFile)
+      setAccount(buildAccountSnapshot(nextUser, account))
+      setProfilePictureFile(null)
+      setSuccess('Profile picture updated.')
+    } catch (requestError) {
+      setError(requestError.message || 'Failed to update your profile picture.')
+    } finally {
+      setProfilePictureSaving(false)
+    }
+  }
+
+  async function handleRemoveProfilePicture() {
+    setProfilePictureSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const nextUser = await removeProfilePicture()
+      setAccount(buildAccountSnapshot(nextUser, account))
+      setProfilePictureFile(null)
+      setSuccess('Profile picture removed.')
+    } catch (requestError) {
+      setError(requestError.message || 'Failed to remove your profile picture.')
+    } finally {
+      setProfilePictureSaving(false)
+    }
   }
 
   async function handleSubmit(event) {
@@ -215,9 +275,45 @@ export default function Settings() {
               </div>
             </div>
 
-            <p className={styles.panelText}>
-              These account details are shown here for reference and stay read-only on this page.
-            </p>
+            <form className={styles.profilePictureForm} onSubmit={handleProfilePictureSubmit}>
+              <Avatar user={account} size="xl" className={styles.accountAvatar} />
+              <div className={styles.profilePictureCopy}>
+                <label className={styles.fileLabel} htmlFor="profile-picture">
+                  Profile picture
+                </label>
+                <p className={styles.panelText}>
+                  Upload a PNG or JPG image to personalize your learner and creator identity.
+                </p>
+                <input
+                  id="profile-picture"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={handleProfilePictureChange}
+                  className={styles.fileInput}
+                  disabled={profilePictureSaving}
+                />
+                {profilePictureFile ? (
+                  <span className={styles.fileName}>{profilePictureFile.name}</span>
+                ) : null}
+              </div>
+              <div className={styles.profilePictureActions}>
+                <button
+                  type="submit"
+                  className={styles.primaryButton}
+                  disabled={profilePictureSaving || !profilePictureFile}
+                >
+                  {profilePictureSaving ? 'Updating...' : 'Update photo'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondaryLink}
+                  onClick={handleRemoveProfilePicture}
+                  disabled={profilePictureSaving || !(account.profile_image_url || account.avatar_url)}
+                >
+                  Remove photo
+                </button>
+              </div>
+            </form>
 
             <div className={styles.inlineActions}>
               {profileSlug ? (

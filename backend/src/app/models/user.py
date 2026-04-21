@@ -1,3 +1,5 @@
+import os
+
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..extensions import db
@@ -11,6 +13,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="viewer")
+    profile_image_path = db.Column(db.String(255), nullable=True)
 
     videos = db.relationship("Video", backref="creator", lazy=True, cascade="all, delete-orphan")
 
@@ -29,7 +32,19 @@ class User(UserMixin, db.Model):
         }
         return labels.get(self.role, self.role.title())
 
+    @property
+    def profile_image_url(self):
+        if not self.profile_image_path:
+            return None
+
+        filename = os.path.basename(str(self.profile_image_path))
+        if not filename:
+            return None
+
+        return f"/users/files/profile-pictures/{filename}"
+
     def to_dict(self):
+        profile_image_url = self.profile_image_url
         return {
             "id": self.id,
             "username": self.username,
@@ -37,15 +52,20 @@ class User(UserMixin, db.Model):
             "role": self.role,
             "display_name": self.username,
             "role_label": self.role_label,
+            "profile_image_url": profile_image_url,
+            "avatar_url": profile_image_url,
         }
 
     def to_public_dict(self, include_counts=False, counts=None):
+        profile_image_url = self.profile_image_url
         data = {
             "id": self.id,
             "username": self.username,
             "display_name": self.username,
             "role": self.role,
             "role_label": self.role_label,
+            "profile_image_url": profile_image_url,
+            "avatar_url": profile_image_url,
         }
 
         if include_counts:

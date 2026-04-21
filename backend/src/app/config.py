@@ -163,6 +163,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
     VIDEO_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "videos")
     THUMBNAIL_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "thumbnails")
+    PROFILE_IMAGE_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "profile-pictures")
 
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024
 
