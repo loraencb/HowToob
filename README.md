@@ -1,11 +1,13 @@
-# OOP-Team-B_Youtube-lite
+# HowToob
 
 A learning-platform MVP with a Flask backend and a React frontend.
+
+The canonical deployment branch for this repository is `main`.
 
 ## Repo Layout
 
 ```text
-OOP-Team-B_Youtube-lite/
+HowToob/
 |-- frontend/          # React client (Vite)
 |-- backend/
 |   |-- src/
@@ -206,7 +208,7 @@ Files that support this path:
 
 - Resource type: Web Service
 - Source: GitHub repo `loraencb/HowToob`
-- Branch: `vinny-frontend-ui`
+- Branch: `main`
 - Build method: Dockerfile
 - Dockerfile path: `Dockerfile`
 - HTTP port: `8080`

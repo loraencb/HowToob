@@ -23,8 +23,8 @@ INSUFFICIENT_TRANSCRIPT_PREFIX = "insufficient_transcript:"
 OPENAI_API_KEY_PLACEHOLDERS = {
     "replace-this-in-digitalocean",
     "replace-me",
-    "your-openai-api-key",
-    "your_openai_api_key",
+    "openai-api-key",
+    "_openai_api_key",
     "set-in-digitalocean",
     "__set_in_digitalocean__",
 }
